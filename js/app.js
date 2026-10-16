@@ -91,7 +91,12 @@ function termHtml(html, cls = '') {
   out.appendChild(div);
 }
 function scrollTerm() { out.scrollTop = out.scrollHeight; }
-$('#log-toggle').onclick = () => { document.body.classList.toggle('log-open'); scrollTerm(); };
+// ログの開閉 (スマホではブランチ図の下部に重ねて表示)
+function setLogOpen(open) {
+  document.body.classList.toggle('log-open', open);
+  $('#log-toggle').innerHTML = open ? `${icon('x')}<span>閉じる</span>` : `${icon('terminal')}<span>ログ</span>`;
+}
+$('#log-toggle').onclick = () => { setLogOpen(!document.body.classList.contains('log-open')); scrollTerm(); };
 
 function promptHtml() {
   const p = game.shell.prompt();
@@ -101,6 +106,7 @@ function renderPrompt() { $('#prompt').innerHTML = promptHtml(); }
 
 function runCommand(line) {
   termHtml(`${promptHtml()} <span class="t-cmd">${esc(line)}</span>`, 'cmdline');
+  const echo = out.lastElementChild;
   const events = [];
   const ctx = {
     errorCount: 0,
@@ -117,8 +123,15 @@ function runCommand(line) {
   game.lastCmd = line;
   explainFirstTime(line);
   afterCommand(events, line, ctx.errorCount);
-  scrollTerm();
+  // 出力が長いときはログを広げ、そのコマンドの先頭から読めるようにする
+  let lines = 0;
+  for (let el = echo.nextElementSibling; el; el = el.nextElementSibling) lines++;
+  if (lines > 3 && isMobileLayout()) {
+    setLogOpen(true);
+    requestAnimationFrame(() => { out.scrollTop = echo.offsetTop - out.offsetTop - 4; });
+  } else scrollTerm();
 }
+const isMobileLayout = () => matchMedia('(max-width: 959px)').matches;
 
 function explainFirstTime(line) {
   const m = line.trim().match(/^(git|gh)\s*([\w-]*)/);
