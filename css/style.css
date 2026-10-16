@@ -574,3 +574,11 @@ body[data-pad="kb"] .kb-row { margin-bottom: 4px; }
   body[data-pad="kb"] .req { max-height: none; }
   body[data-pad="kb"] .req-actions { display: flex; }
 }
+
+/* ===== キーボードを小さく ===== */
+.kb { padding: 4px 3px calc(4px + env(safe-area-inset-bottom)); }
+.kb-row, body[data-pad="kb"] .kb-row { gap: 3px; margin-bottom: 4px; }
+.kb-key, body[data-pad="kb"] .kb-key { height: 34px; font-size: 15px; border-radius: 5px; }
+.kb-key.fn { font-size: 12px; }
+.kb-key .i { width: 17px; height: 17px; }
+.kb-extra .kb-key, body[data-pad="kb"] .kb-extra .kb-key { height: 28px; font-size: 12px; }
