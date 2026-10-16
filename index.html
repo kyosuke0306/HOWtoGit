@@ -9,21 +9,23 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=e2e847c9">
+  <link rel="stylesheet" href="css/style.css?v=6c75430c">
   <script type="importmap">
   {
     "imports": {
-      "./js/app.js": "./js/app.js?v=c0776368",
+      "./js/app.js": "./js/app.js?v=02e0bab1",
+      "./js/builder.js": "./js/builder.js?v=b5fe97b5",
       "./js/diff.js": "./js/diff.js?v=8c59de29",
       "./js/docs.js": "./js/docs.js?v=b1914027",
-      "./js/git.js": "./js/git.js?v=b8e07849",
-      "./js/graph.js": "./js/graph.js?v=ca6fad70",
-      "./js/icons.js": "./js/icons.js?v=741e1495",
+      "./js/git.js": "./js/git.js?v=015be560",
+      "./js/graph.js": "./js/graph.js?v=da7aa1f5",
+      "./js/icons.js": "./js/icons.js?v=8710faa1",
       "./js/keyboard.js": "./js/keyboard.js?v=a869e99f",
-      "./js/lessons.js": "./js/lessons.js?v=ca26eafa",
-      "./js/missions.js": "./js/missions.js?v=76e363c8",
+      "./js/missions.js": "./js/missions.js?v=156153c1",
       "./js/scenario.js": "./js/scenario.js?v=c473d604",
-      "./js/shell.js": "./js/shell.js?v=0fd84649"
+      "./js/shape.js": "./js/shape.js?v=ab097c71",
+      "./js/shell.js": "./js/shell.js?v=0fd84649",
+      "./js/stages.js": "./js/stages.js?v=ecb290ae"
     }
   }
   </script>
@@ -44,72 +46,44 @@
   <section class="screen-home" id="home"></section>
   <section class="screen-lessons" id="lessons"></section>
 
-  <main class="layout">
-    <section class="view view-play active" data-view="play">
-      <div class="mission" id="mission"></div>
-      <div class="terminal" id="terminal">
-        <div class="term-out" id="term-out" aria-live="polite"></div>
-        <div class="quick" id="quick">
-          <button data-run="git status">status</button>
-          <button data-insert="git add .">add .</button>
-          <button data-insert='git commit -m ""' data-caret="-1">commit</button>
-          <button data-run="git log --oneline --all">log</button>
-          <button data-insert="git switch ">switch</button>
-          <button data-insert="git push">push</button>
-          <button data-insert="git pull">pull</button>
-          <button data-insert="edit ">edit</button>
-          <button data-run="ls">ls</button>
-        </div>
-        <div class="term-input">
-          <span class="prompt" id="prompt"></span>
-          <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="コマンド入力" placeholder="コマンドを入力">
-          <button id="btn-enter" class="enter-btn" aria-label="実行"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
-        </div>
-        <div id="kb" class="kb" aria-label="キーボード"></div>
-      </div>
-    </section>
+  <main class="play" id="play">
+    <section class="req" id="req"></section>
 
-    <section class="view view-graph" data-view="graph">
-      <div class="card graph-card">
-        <div class="card-head">
+    <section class="board">
+      <div class="board-main">
+        <div class="board-head">
           <div class="tabs">
-            <button data-g="local" class="active"><svg class="i" aria-hidden="true"><use href="#i-monitor"/></svg>ローカル</button>
-            <button data-g="remote"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg>GitHub</button>
+            <button data-g="local" class="active"><svg class="i" aria-hidden="true"><use href="#i-monitor"/></svg><span>手元</span></button>
+            <button data-g="remote"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg><span>GitHub</span></button>
           </div>
-          <small id="remote-name" class="muted"></small>
+          <button id="btn-files" class="btn small"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><span>ファイル</span></button>
         </div>
         <div id="graph" class="graph"></div>
-      </div>
-    </section>
-
-    <section class="view view-files" data-view="files">
-      <div class="card areas">
-        <div class="card-head"><h3><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><span id="cwd-label">~</span></h3><span id="stashinfo" class="stashinfo"></span></div>
         <div id="opbanner"></div>
-        <div class="area-cols">
-          <div class="area" id="area-work"><h4>作業中</h4><div class="files"></div></div>
-          <div class="area-arrow">add</div>
-          <div class="area" id="area-stage"><h4>ステージ</h4><div class="files"></div></div>
-          <div class="area-arrow">commit</div>
-          <div class="area" id="area-repo"><h4>コミット済</h4><div class="files"></div></div>
-        </div>
+      </div>
+      <div class="board-goal" id="goal-box">
+        <div class="board-head"><b><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg>ゴール</b></div>
+        <div id="goal" class="graph"></div>
+      </div>
+      <div class="log-wrap">
+        <button type="button" class="log-toggle" id="log-toggle" aria-label="ログを広げる"><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg><span>ログ</span></button>
+        <div class="log" id="term-out" aria-live="polite"></div>
       </div>
     </section>
 
-    <section class="view view-chat" data-view="chat">
-      <div class="card chat-card" id="chat-card">
-        <div class="card-head"><h3><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>チーム</h3></div>
-        <div id="chat" class="chat"></div>
+    <section class="console" id="terminal">
+      <div class="cmdline">
+        <span class="prompt" id="prompt"></span>
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="コマンド入力" placeholder="下のボタンで組み立てる">
+        <button id="btn-clear" class="icon-btn" aria-label="消す"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <button id="btn-pad" class="icon-btn" aria-label="キーボードに切替"><svg class="i" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
+        <button id="btn-enter" class="enter-btn" aria-label="実行"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
       </div>
+      <div class="cmd-desc" id="cmd-desc"></div>
+      <div class="builder" id="builder"></div>
+      <div id="kb" class="kb" aria-label="キーボード"></div>
     </section>
   </main>
-
-  <nav class="tabbar" aria-label="表示切替">
-    <button data-view="play" class="active"><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg><span>操作</span></button>
-    <button data-view="graph"><svg class="i" aria-hidden="true"><use href="#i-branch"/></svg><span>グラフ</span></button>
-    <button data-view="files"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><span>ファイル</span></button>
-    <button data-view="chat"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg><span>チャット</span></button>
-  </nav>
 
   <div class="modal" id="modal" role="dialog" aria-modal="true">
     <div class="modal-box">
@@ -139,6 +113,6 @@
   <div id="toasts" class="toasts"></div>
   <div id="confetti" class="confetti"></div>
 
-  <script type="module" src="js/app.js?v=c0776368"></script>
+  <script type="module" src="js/app.js?v=02e0bab1"></script>
 </body>
 </html>

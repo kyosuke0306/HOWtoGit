@@ -38,6 +38,8 @@ export class World {
     this.user = { name: 'あなた', email: 'you@example.com' };
     this.prCounter = 0;
     this.rand = Math.random;
+    this.easy = false;
+    this.easyN = 0;
   }
 
   get dir() { return this.dirs[this.cwd]; }
@@ -59,6 +61,8 @@ export class World {
 
   makeCommit({ parents, tree, message, author }) {
     this.seq++;
+    const cn = /^C(\d+)$/.exec(message || '');
+    if (cn && Number(cn[1]) > this.easyN) this.easyN = Number(cn[1]);
     const id = this.newId();
     const date = new Date(Date.UTC(2026, 3, 1, 0, 0) + this.seq * 7 * 60000);
     this.objects[id] = {
@@ -216,7 +220,11 @@ export function resolveRef(world, repo, spec) {
   else if (repo.tags[base]) id = repo.tags[base];
   else if (repo.remoteRefs[base]) id = repo.remoteRefs[base];
   else if (repo.remoteRefs[base.replace(/^(refs\/)?remotes\//, '')]) id = repo.remoteRefs[base.replace(/^(refs\/)?remotes\//, '')];
-  else if (/^[0-9a-f]{4,40}$/.test(base)) {
+  else if (world.easy && /^C\d+'*$/.test(base)) {
+    // かんたんモードではコミット名 (C2 など) でも指定できる
+    const hits = Object.values(world.objects).filter((c) => c.message === base).sort((x, y) => y.seq - x.seq);
+    if (hits.length) id = hits[0].id;
+  } else if (/^[0-9a-f]{4,40}$/.test(base)) {
     const hits = Object.keys(world.objects).filter((k) => k.startsWith(base));
     if (hits.length === 1) id = hits[0];
   }
@@ -766,6 +774,17 @@ class GitCmd {
       return;
     }
     const amend = flags.amend;
+    // かんたんモード (ステージ用): 変更がなくてもコミットでき、名前は C1, C2…
+    if (w.easy && !op && !amend) {
+      const s0 = computeStatus(w, this.dir);
+      if (!s0.staged.length && !s0.unstaged.length && !s0.conflicts.length) {
+        const n = ++w.easyN;
+        const f = `c${n}.txt`;
+        this.dir.files[f] = `${n}\n`;
+        repo.index[f] = this.dir.files[f];
+        if (!message) message = `C${n}`;
+      } else if (!message) message = `C${++w.easyN}`;
+    }
     if (!message) {
       if (op && op.message) message = op.message;
       else if (amend && this.head) message = w.objects[this.head].message;
@@ -965,6 +984,14 @@ class GitCmd {
     if (pos.length && !flags.a && !flags.r && !flags.v && !flags.vv && !flags.list) {
       const name = pos[0];
       if (!validBranchName(name)) { ctx.out(`fatal: '${name}' is not a valid branch name`, 'err'); return; }
+      if (repo.branches[name] !== undefined && flags.f) {
+        if (name === cur) { ctx.out(`fatal: cannot force update the branch '${name}' used by worktree`, 'err'); return; }
+        const to = this.resolve(pos[1] || 'HEAD');
+        if (!to) return;
+        repo.branches[name] = to;
+        ctx.ev('branch-move', { name, id: to });
+        return;
+      }
       if (repo.branches[name] !== undefined) { ctx.out(`fatal: a branch named '${name}' already exists`, 'err'); return; }
       const start = pos[1] ? this.resolve(pos[1]) : this.head;
       if (!start) {
@@ -1388,7 +1415,7 @@ class GitCmd {
     // 作業ツリーへ反映 (変化したパスだけ)
     applyResult(this.dir, repo, res, touched);
     repo.origHead = ours;
-    const msg = message || (repo.remoteRefs[label] !== undefined ? `Merge remote-tracking branch '${label}'` : `Merge branch '${label}'`) + (cur !== 'main' && cur !== 'HEAD' ? ` into ${cur}` : '');
+    const msg = message || (w.easy ? `C${w.easyN + 1}` : null) || (repo.remoteRefs[label] !== undefined ? `Merge remote-tracking branch '${label}'` : `Merge branch '${label}'`) + (cur !== 'main' && cur !== 'HEAD' ? ` into ${cur}` : '');
     if (squash) {
       ctx.out('Squash commit -- not updating HEAD');
       if (res.conflicts.length) {
@@ -1442,10 +1469,10 @@ class GitCmd {
     let base, theirs, message;
     if (type === 'revert') {
       base = w.tree(cid); theirs = w.tree(parent);
-      message = `Revert "${firstLine(c.message)}"\n\nThis reverts commit ${c.id.slice(0, 7)}.`;
+      message = w.easy ? `${firstLine(c.message)}の打消し` : `Revert "${firstLine(c.message)}"\n\nThis reverts commit ${c.id.slice(0, 7)}.`;
     } else {
       base = w.tree(parent); theirs = w.tree(cid);
-      message = c.message;
+      message = w.easy ? `${c.message}'` : c.message;
     }
     const ours = w.tree(this.head);
     const res = mergeTrees(base, ours, theirs, 'HEAD', `${short(cid)} (${firstLine(c.message)})`);
