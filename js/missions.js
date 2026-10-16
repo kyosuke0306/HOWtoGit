@@ -66,7 +66,7 @@ export const MISSIONS = [
       const item = api.pick(['パフェ 700円', 'サンドイッチ 600円', 'ラテ 480円', 'プリン 350円']);
       const menu = treeOfRemote(api, 'main')['menu.txt'] || FILES['menu.txt'];
       api.teammatePush('main', { 'menu.txt': menu + item + '\n' }, `メニューに${item.split(' ')[0]}を追加`, '佐藤');
-      if (Math.random() < 0.5) api.teammatePush('main', { 'README.md': (treeOfRemote(api, 'main')['README.md'] || '') + '\n営業時間: 9:00-18:00\n' }, '営業時間を追記', '田中');
+      if (Math.random() < 0.5) api.teammatePush('main', { 'info.txt': '営業時間: 9:00-18:00\n' }, '営業時間を追記', '田中');
       m.story = `メニューに「${item}」を追加して GitHub に push しました！あなたのローカルの <b>main</b> も最新にしておいてください。`;
     },
     hints: () => ['main ブランチにいるか確認 (git switch main)', 'git pull でリモートの変更を取り込めます', 'git fetch → git merge origin/main でもOK'],
@@ -315,7 +315,7 @@ export const MISSIONS = [
       const c1 = api.w.commitOn(base, { 'profile.html': '<h1>スタッフ紹介</h1>\n' }, 'スタッフ紹介ページを追加', api.w.user.name);
       const c2 = api.w.commitOn(c1, { 'profile.css': '.staff { margin: 8px; }\n' }, 'スタッフ紹介のCSS', api.w.user.name);
       d.repo.branches[m.branch] = c2;
-      api.teammatePush('main', { 'README.md': (treeOfRemote(api, 'main')['README.md'] || '') + '\n## 更新履歴\n' }, 'READMEに更新履歴を追加', '田中');
+      api.teammatePush('main', { 'CHANGELOG.md': (treeOfRemote(api, 'main')['CHANGELOG.md'] || '# 変更履歴\n') + '- 田中: プロフィール機能の準備\n' }, '変更履歴を更新', '田中');
       api.teammatePush('main', { 'index.html': (treeOfRemote(api, 'main')['index.html'] || '').replace('</body>', '<footer>© Cafe Shop</footer>\n</body>') }, 'フッターを追加', '佐藤');
       m.story = `あなたが昨日作った <b>${m.branch}</b> ブランチ、その後 main がかなり進んじゃった。<b>GitHub の main の最新</b>に <b>rebase</b> して、一直線の履歴にしてから push してね。(マージコミットは作らないで！)`;
     },

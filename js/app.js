@@ -433,7 +433,7 @@ function renderChallengePanel() {
   let actions;
   if (c.state === 'over') actions = `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度挑戦</button>`;
   else if (c.result) actions = `<button class="btn primary" id="btn-next">次のミッションへ ${icon('play')}</button>`;
-  else actions = `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')} ヒント (${c.hints}/${hints.length})</button><button class="btn ghost" id="btn-skip">スキップ (${icon('heart', 'heart')}-1)</button>`;
+  else actions = `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')} ヒント (${c.hints}/${hints.length})</button><button class="btn ghost" id="btn-skip">スキップ (ライフ -1)</button>`;
   const status = c.result === 'success' ? `<div class="m-result ok">${icon('check-circle')} 成功！</div>` : c.result === 'fail' ? `<div class="m-result ng">${icon('x-circle')} 失敗: ${esc(c.failReason)}</div>` : '';
   $('#mission').innerHTML = `
     <div class="m-head">
