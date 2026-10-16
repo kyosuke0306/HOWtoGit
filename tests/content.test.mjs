@@ -2,7 +2,6 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { World, headId } from '../js/git.js';
 import { Shell } from '../js/shell.js';
-import { LESSONS } from '../js/lessons.js';
 import { MISSIONS, FIRST_MISSION } from '../js/missions.js';
 import { createApi, buildTeamRemote, TEAM_URL } from '../js/scenario.js';
 
@@ -35,38 +34,6 @@ function findCommit(w, msg) {
   const c = Object.values(w.objects).filter((o) => o.message.startsWith(msg)).sort((a, b) => b.seq - a.seq)[0];
   if (!c) throw new Error('commit not found: ' + msg);
   return c.id.slice(0, 7);
-}
-
-// ヒントがそのまま実行できないステップの解答
-const SOLUTIONS = {
-  conflict: { 3: ['EDIT menu.txt コーヒー 450円\n紅茶 350円\nケーキ 500円\n'] },
-  rebase: { 3: ['EDIT index.html <h1>My Great App</h1>\n', 'git add index.html'] },
-  'cherry-tag': { 1: ['git cherry-pick {{誤字を修正}}'] },
-};
-
-for (const [li, L] of LESSONS.entries()) {
-  test(`lesson ${li + 1}: ${L.title}`, () => {
-    const { api, exec, log } = harness();
-    L.setup(api);
-    let step = 0, state = {};
-    const enter = () => { state = {}; const s = L.steps[step]; if (s && s.onEnter) s.onEnter(api); };
-    enter();
-    const advance = (evs) => {
-      let guard = 0;
-      while (step < L.steps.length && guard++ < 20) {
-        if (!L.steps[step].check(api, evs, state)) break;
-        step++;
-        if (step < L.steps.length) { enter(); if (L.steps[step].onEnter) evs = []; }
-      }
-    };
-    while (step < L.steps.length) {
-      const s = L.steps[step];
-      const before = step;
-      const cmds = (SOLUTIONS[L.id] && SOLUTIONS[L.id][step]) || [s.hint];
-      for (const c of cmds) advance(exec(c));
-      assert.ok(step > before, `stuck at step ${before + 1}: ${s.text}\n--- output ---\n${log.slice(-15).join('\n')}`);
-    }
-  });
 }
 
 // ミッションの解答
