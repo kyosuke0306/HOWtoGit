@@ -307,7 +307,7 @@ export class Shell {
       ctx.out('');
       ctx.out(`${remote.url.replace(/\.git$/, '')}/pull/${number}`, 'info');
       const reviewer = remote.owner === 'team' ? '田中さん' : 'レビュアー';
-      ctx.out(`💬 ${reviewer}: 「レビューしました！LGTM 👍 マージしてOKです」`, 'ok');
+      ctx.out(`[レビュー] ${reviewer}: 「レビューしました！LGTM マージしてOKです」`, 'ok');
       ctx.hint(`gh pr merge ${number} でマージできます。`);
       ctx.ev('pr-create', { number, head, base });
       return;

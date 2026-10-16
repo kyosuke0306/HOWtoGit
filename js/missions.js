@@ -112,7 +112,7 @@ export const MISSIONS = [
       m.badId = api.teammatePush(m.bad, { 'menu.txt': changed(480) }, `${name}の値段を見直し`, '田中', 'main');
       m.goodId = api.teammatePush(m.good, { 'hours.txt': '営業時間 9:00-18:00\n定休日 水曜\n' }, '営業時間のページを追加', '佐藤', 'main');
       api.teammatePush('main', { 'menu.txt': changed(450) }, `${name}を450円に値上げ`, '店長');
-      m.story = `店長が main の menu.txt を更新しました。<b>${m.bad}</b> と <b>${m.good}</b> のうち、<b>main と競合しない方だけ</b>を main にマージして push してください。<br><span class="t-err">⚠ 競合を起こしたら失敗です！</span>`;
+      m.story = `店長が main の menu.txt を更新しました。<b>${m.bad}</b> と <b>${m.good}</b> のうち、<b>main と競合しない方だけ</b>を main にマージして push してください。<br><span class="t-err warn-line">競合を起こしたら失敗です！</span>`;
     },
     hints: (m) => ['git fetch でリモートの情報を取ってこよう', `git show origin/${m.bad} や git show origin/${m.good} で、それぞれ何を変更したか見てみよう`, 'git show origin/main で、店長がどのファイルを変えたかも確認', 'main と同じファイル・同じ行を変えている方が競合します'],
     check(api, evs, m) {
@@ -182,7 +182,7 @@ export const MISSIONS = [
       const menu = treeOfRemote(api, 'main')['menu.txt'] || FILES['menu.txt'];
       m.good = menu;
       m.bad = api.teammatePush('main', { 'menu.txt': menu.replace(/\d+円/g, '0円') }, 'テスト用に全部0円にした', '佐藤');
-      m.story = '大変！佐藤さんのテスト用コミット「テスト用に全部0円にした」が本番の main に入ってしまった！<b>git revert</b> で打ち消して push して。<br><span class="t-err">⚠ 共有ブランチの履歴を書き換える reset + force push は厳禁！</span>';
+      m.story = '大変！佐藤さんのテスト用コミット「テスト用に全部0円にした」が本番の main に入ってしまった！<b>git revert</b> で打ち消して push して。<br><span class="t-err warn-line">共有ブランチの履歴を書き換える reset + force push は厳禁！</span>';
     },
     hints: () => ['git switch main → git pull で問題のコミットを取り込む', 'git log --oneline で問題のコミットIDを確認', 'git revert <ID> で打ち消しコミットを作る', 'git push で共有'],
     check(api, evs, m) {
@@ -356,7 +356,7 @@ export const MISSIONS = [
       api.teammatePush(m.branch, { 'menu.txt': menu + 'レモネード 450円\n' }, 'レモネードを追加', '佐藤', 'main');
       m.number = ++api.w.prCounter;
       api.remote().prs.push({ number: m.number, title: 'レモネードを追加', head: m.branch, base: 'main', state: 'open', author: '佐藤' });
-      m.story = `PR #${m.number}「レモネードを追加」を作りました！確認してマージお願いします🍋 マージしたら、あなたのローカルの main も更新しておいてね。`;
+      m.story = `PR #${m.number}「レモネードを追加」を作りました！確認してマージお願いします！ マージしたら、あなたのローカルの main も更新しておいてね。`;
     },
     hints: (m) => ['gh pr list で PR 一覧を確認', `gh pr view ${m.number} で内容を確認`, `gh pr merge ${m.number}`, 'git switch main → git pull'],
     check(api, evs, m) {
@@ -376,7 +376,7 @@ export const MISSIONS = [
       api.w.cwd = tPath(api);
       m.file = api.pick(Object.keys(api.w.tree(headId(d.repo))).filter((f) => /\.(js|html|css|txt)$/.test(f)));
       d.files[m.file] = 'ああああああああ (猫がキーボードの上を歩いた)\n';
-      m.story = `大変、<b>${m.file}</b> が猫に荒らされた！🐈 最後にコミットした状態に戻して。`;
+      m.story = `大変、<b>${m.file}</b> が猫に荒らされた！ 最後にコミットした状態に戻して。`;
     },
     hints: (m) => ['git status / git diff で状態を確認', `git restore ${m.file} で最後のコミットの状態に戻せます`],
     check(api, evs, m) {

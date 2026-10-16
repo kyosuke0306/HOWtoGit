@@ -451,7 +451,7 @@ function gitHelp(ctx) {
   ];
   groups.forEach(([t, c]) => ctx.out([[t.padEnd(14, '　'), 'info'], ['  ' + c, '']]));
   ctx.out('');
-  ctx.hint('詳しくは画面上部の「📖 コマンド辞典」を見てね。');
+  ctx.hint('詳しくは画面上部の「コマンド辞典」を見てね。');
 }
 
 function gitInit(world, args, ctx) {

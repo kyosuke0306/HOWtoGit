@@ -66,6 +66,19 @@ body {
   min-height: 100vh;
 }
 code, pre { font-family: var(--mono); }
+.i { width: 1.15em; height: 1.15em; vertical-align: -0.2em; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.i.big { width: 30px; height: 30px; }
+.i.heart { color: var(--danger); }
+.btn .i { margin-right: 2px; }
+.logo { color: var(--accent); display: inline-flex; }
+.logo .i { width: 26px; height: 26px; stroke-width: 2.4; }
+.avatar-svg { display: block; flex: none; border-radius: 50%; }
+.avatar-svg.sys { display: grid; place-items: center; background: var(--bg-raised); border: 1px solid var(--border); color: var(--muted); }
+.avatar-svg.sys .i { width: 60%; height: 60%; }
+.warn-line { display: inline-flex; align-items: center; gap: 4px; }
+.warn-line::before { content: ''; width: 1.1em; height: 1.1em; background: currentColor; flex: none;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3L2 20h20z'/%3E%3Cpath d='M12 10v4M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3L2 20h20z'/%3E%3Cpath d='M12 10v4M12 17h.01'/%3E%3C/svg%3E") center / contain no-repeat; }
 code { background: var(--bg-raised); border: 1px solid var(--border); border-radius: 5px; padding: 0 5px; font-size: .9em; }
 small { font-size: .82em; }
 .muted { color: var(--muted); }
@@ -116,11 +129,11 @@ small { font-size: .82em; }
 .xpbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .5s; }
 #xp-text { color: var(--muted); font-size: 10px; margin-left: auto; font-family: var(--mono); }
 .game-stats { display: flex; align-items: center; gap: 12px; font-weight: 700; }
-.hearts { color: var(--danger); letter-spacing: 2px; font-size: 16px; }
+.hearts { color: var(--danger); display: inline-flex; gap: 2px; font-size: 18px; }
 .hearts .lost { opacity: .2; }
 .score { font-size: 18px; font-family: var(--mono); }
 .score small { font-size: 11px; margin-left: 2px; color: var(--muted); }
-.streak { color: var(--warn); }
+.streak { color: var(--warn); display: inline-flex; align-items: center; gap: 2px; }
 .best { font-size: 11px; color: var(--muted); font-weight: 400; }
 .progress { font-size: 13px; color: var(--muted); font-weight: 500; }
 .top-actions { display: flex; gap: 6px; }
@@ -400,8 +413,7 @@ small { font-size: .82em; }
   .level .lv-title, #xp-text { display: none; }
   .level { min-width: 80px; }
   .top-actions { margin-left: auto; }
-  #btn-docs { font-size: 0; padding: 6px 10px; }
-  #btn-docs::before { content: '📖'; font-size: 14px; }
+  #btn-docs .label { display: none; }
   .area-cols { grid-template-columns: 1fr; }
   .area-arrow { flex-direction: row; gap: 6px; transform: rotate(0); }
   .area-arrow { font-size: 0; }
@@ -417,3 +429,21 @@ small { font-size: .82em; }
   .cmd-table tr { border-bottom: 1px solid var(--border); padding: 6px 0; }
   .graph-row .author { display: none; }
 }
+
+/* ---------- アイコンの位置調整 ---------- */
+.btn, .modes button, .tabs button, .quick button { display: inline-flex; align-items: center; gap: 5px; }
+.pill .i { width: 1em; height: 1em; margin-right: 3px; vertical-align: -0.15em; }
+.hint-line { display: flex; align-items: flex-start; gap: 6px; }
+.hint-line .i { color: #f2cc60; margin-top: .2em; }
+.explain .i, .banner .i { margin-right: 2px; }
+.chip i .i { width: 1em; height: 1em; vertical-align: -0.15em; }
+.steps li .mark .i { width: 13px; height: 13px; stroke-width: 3; }
+.clear-mark .i { width: 1em; height: 1em; stroke-width: 3; }
+.term-head .i { width: 14px; height: 14px; }
+.area h4 .i, .card-head h3 .i { color: var(--accent-2); }
+.graph-empty .i.big { margin-bottom: 6px; opacity: .7; }
+.flow-box .i.big { color: var(--accent-2); margin-bottom: 4px; }
+.toast { display: flex; align-items: center; gap: 6px; }
+.modal-head h2 { display: flex; align-items: center; gap: 8px; }
+.modes-intro b { display: flex; align-items: center; gap: 6px; }
+.m-result { display: flex; align-items: center; gap: 6px; }

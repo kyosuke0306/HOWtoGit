@@ -1,4 +1,5 @@
 // コミットグラフの描画 (縦向き、新しいコミットが上)
+import { icon } from './icons.js';
 
 const ROW_H = 34;
 const COL_W = 22;
@@ -118,8 +119,8 @@ export function renderGraph(container, world, refs, opts = {}) {
     const pills = (refsAt[n.id] || []).map((r) => {
       if (r.kind === 'head') return `<span class="pill pill-head">HEAD</span>`;
       if (r.kind === 'branch') return `<span class="pill pill-branch${r.current ? ' current' : ''}">${r.current ? '<b>HEAD →</b> ' : ''}${esc(r.name)}</span>`;
-      if (r.kind === 'remote') return `<span class="pill pill-remote">☁ ${esc(r.name)}</span>`;
-      if (r.kind === 'tag') return `<span class="pill pill-tag">🏷 ${esc(r.name)}</span>`;
+      if (r.kind === 'remote') return `<span class="pill pill-remote">${icon('cloud')}${esc(r.name)}</span>`;
+      if (r.kind === 'tag') return `<span class="pill pill-tag">${icon('tag')}${esc(r.name)}</span>`;
       return '';
     }).join('');
     const parentTree = c.parents[0] ? world.objects[c.parents[0]].tree : {};

@@ -1,4 +1,4 @@
-# 🌱 HOW to Git — 遊んで学ぶ Git シミュレーター
+# HOW to Git — 遊んで学ぶ Git シミュレーター
 
 Git の使い方を **初心者向けに、ゲーム感覚で** 学べる Web アプリです。
 ブラウザの中の疑似ターミナルで本物そっくりの Git コマンドを打ち、コミットグラフやファイルの状態がどう変わるかをリアルタイムに確認できます。
@@ -15,9 +15,9 @@ Git の使い方を **初心者向けに、ゲーム感覚で** 学べる Web �
 
 | モード | 内容 |
 |---|---|
-| 📘 レッスン | 全15レッスン。init / commit から branch・merge・競合・push・pull・stash・reset/revert・rebase・cherry-pick・tag・PR・.gitignore まで順番に |
-| 🎮 チャレンジ | チームからランダムにミッションが届く。ライフ ❤×3、スコア・連続ボーナス・ハイスコアあり。「競合したら失敗」「force push したら失敗」など |
-| 🧪 フリー | 何でも試せる砂場。ボタンで仲間の push / ブランチ / PR を発生させられます |
+| レッスン | 全15レッスン。init / commit から branch・merge・競合・push・pull・stash・reset/revert・rebase・cherry-pick・tag・PR・.gitignore まで順番に |
+| チャレンジ | チームからランダムにミッションが届く。ライフ3つ、スコア・連続ボーナス・ハイスコアあり。「競合したら失敗」「force push したら失敗」など |
+| フリー | 何でも試せる砂場。ボタンで仲間の push / ブランチ / PR を発生させられます |
 
 ### 対応している主なコマンド
 
@@ -57,6 +57,7 @@ js/scenario.js    チームリポジトリなどのシナリオ
 js/lessons.js     レッスン定義
 js/missions.js    チャレンジのミッション定義
 js/docs.js        コマンド辞典・初回解説
+js/icons.js       SVG アイコン
 js/app.js         UI とゲーム進行
 tests/            node --test によるテスト
 ```

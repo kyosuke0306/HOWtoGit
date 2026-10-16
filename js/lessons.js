@@ -161,17 +161,17 @@ export const LESSONS = withSoftSteps([
     title: 'GitHub に push する',
     summary: 'remote add と push',
     intro: `<p>ここまでは自分のパソコンの中 (<b>ローカル</b>) だけの話でした。チームで共有するには、GitHub などの <b>リモートリポジトリ</b> にコミットを送ります。これが <code>git push</code>。</p>
-<p>右上の「☁ GitHub」タブでリモートの様子が見られます。</p>`,
+<p>右上の「GitHub」タブでリモートの様子が見られます。</p>`,
     setup(api) { myApp(api); },
     steps: [
       { text: 'まず GitHub にリポジトリを作ろう。(本物の GitHub では Web 画面の「New」ボタンでも作れます)', hint: 'gh repo create my-app', check: (api) => !!api.w.remotes[MYAPP_URL] },
       { text: '作ったリポジトリを <b>origin</b> という名前でリモート登録しよう。', hint: `git remote add origin ${MYAPP_URL}`, check: (api) => api.repo.remotes.origin === MYAPP_URL },
       { text: '<code>git push -u origin main</code> で送信！<code>-u</code> で「main の送り先は origin の main」と覚えさせます。', hint: 'git push -u origin main', check: (api) => api.remote(MYAPP_URL).branches.main === api.repo.branches.main && !!api.repo.upstream.main },
-      { text: '「☁ GitHub」タブを見てみよう。同じコミットが届いています。次はファイルを変更してコミットしよう。', hint: 'echo "練習中です" >> README.md && git commit -am "READMEを更新"', check: (api) => api.repo.branches.main !== api.remote(MYAPP_URL).branches.main },
+      { text: '「GitHub」タブを見てみよう。同じコミットが届いています。次はファイルを変更してコミットしよう。', hint: 'echo "練習中です" >> README.md && git commit -am "READMEを更新"', check: (api) => api.repo.branches.main !== api.remote(MYAPP_URL).branches.main },
       { text: '<code>git status</code> を見ると「ahead of \'origin/main\' by 1 commit」(1コミット先行) と表示されます。', hint: 'git status', check: (api, evs) => api.has(evs, 'status') },
       { text: '2回目からは <code>git push</code> だけでOK！', hint: 'git push', check: (api) => api.remote(MYAPP_URL).branches.main === api.repo.branches.main },
     ],
-    outro: 'これであなたのコードが GitHub に保存されました。origin/main (☁) はリモートの main の位置を表しています。',
+    outro: 'これであなたのコードが GitHub に保存されました。origin/main (赤いラベル) はリモートの main の位置を表しています。',
   },
   {
     id: 'clone-pull',
@@ -190,11 +190,11 @@ export const LESSONS = withSoftSteps([
         hint: 'git fetch',
         onEnter(api) {
           api.teammatePush('main', { 'menu.txt': FILES['menu.txt'] + 'パフェ 700円\n' }, 'メニューにパフェを追加', '佐藤');
-          api.chat('佐藤', 'メニューにパフェを追加して push しました！🍨');
+          api.chat('佐藤', 'メニューにパフェを追加して push しました！');
         },
         check: (api, evs) => api.has(evs, 'fetch'),
       },
-      { text: 'グラフを見ると ☁ origin/main だけが先に進んでいます。<code>git merge origin/main</code> で取り込もう。(fetch + merge = pull)', hint: 'git merge origin/main', check: (api) => api.contains(api.remote().branches.main, api.repo.branches.main) },
+      { text: 'グラフを見ると origin/main だけが先に進んでいます。<code>git merge origin/main</code> で取り込もう。(fetch + merge = pull)', hint: 'git merge origin/main', check: (api) => api.contains(api.remote().branches.main, api.repo.branches.main) },
       {
         text: '田中さんも push したようです。今度は <code>git pull</code> で一発で取り込もう。',
         hint: 'git pull',
@@ -233,7 +233,7 @@ export const LESSONS = withSoftSteps([
         hint: 'echo "パフェ 700円" >> menu.txt && git commit -am "パフェを追加" && git pull --rebase && git push',
         onEnter(api) {
           api.teammatePush('main', { 'index.html': FILES['index.html'].replace('おいしいコーヒーあります', 'おいしいコーヒーと紅茶あります') }, 'キャッチコピーを変更', '佐藤');
-          api.chat('佐藤', 'キャッチコピーを変えました☕');
+          api.chat('佐藤', 'キャッチコピーを変えました');
         },
         check: (api, evs, st) => {
           if (api.has(evs, 'pull', (e) => e.result === 'rebase')) st.rebased = true;
