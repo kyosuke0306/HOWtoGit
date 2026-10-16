@@ -1,0 +1,146 @@
+// コマンド辞典と、初めて使ったときの解説
+
+export const CONCEPTS = [
+  ['リポジトリ', 'ファイルの変更履歴を保存する場所。フォルダの中の .git が本体です。'],
+  ['作業ディレクトリ', '実際にファイルを編集する場所。ここで変更しただけでは記録されません。'],
+  ['ステージングエリア', '「次のコミットに含める変更」を置いておく場所。git add で載せます。'],
+  ['コミット', 'ステージした変更をひとまとまりで履歴に記録したもの。IDとメッセージが付きます。'],
+  ['ブランチ', 'コミットを指す「付箋」。作業を枝分かれさせて、他の人の作業と並行して進められます。'],
+  ['HEAD', '「今いる場所」を指す印。通常は今のブランチを指しています。'],
+  ['リモート (origin)', 'GitHub などにあるチーム共有のリポジトリ。origin はその標準的な名前です。'],
+  ['origin/main', 'リモートの main が「最後に確認したとき」どこにあったかの記録 (リモート追跡ブランチ)。fetch で更新されます。'],
+  ['マージ', '2つのブランチの変更を1つにまとめること。'],
+  ['Fast-forward', 'まとめる先が単に遅れているだけのとき、ブランチを前に進めるだけで済むマージ。'],
+  ['競合 (コンフリクト)', '2人が同じ場所を違う内容に変えたとき、Gitが自動でまとめられない状態。人が選んで直します。'],
+  ['プルリクエスト (PR)', 'GitHub上で「このブランチをmainに取り込んでください」とレビューを依頼する仕組み。'],
+];
+
+export const COMMANDS = [
+  {
+    cat: 'はじめる',
+    items: [
+      ['git init', 'いまのフォルダを Git リポジトリにする', 'git init'],
+      ['git clone <URL>', 'リモートのリポジトリを丸ごとコピーしてくる', 'git clone https://github.com/team/cafe-shop.git'],
+      ['git config user.name "名前"', 'コミットに記録される名前を設定する', 'git config --global user.name "Taro"'],
+    ],
+  },
+  {
+    cat: '変更を記録する',
+    items: [
+      ['git status', '今の状態 (変更・ステージ・ブランチ) を確認する。迷ったらまずこれ！', 'git status'],
+      ['git add <file>', '変更をステージングエリアに載せる。git add . で全部', 'git add index.html'],
+      ['git commit -m "メッセージ"', 'ステージした変更を履歴に記録する', 'git commit -m "トップページを追加"'],
+      ['git commit -am "メッセージ"', '追跡中ファイルの変更を add してそのままコミット (新規ファイルは対象外)', 'git commit -am "誤字を修正"'],
+      ['git commit --amend -m "..."', '直前のコミットをやり直す (push 前だけにしよう)', 'git commit --amend -m "正しいメッセージ"'],
+      ['git diff', 'まだステージしていない変更を見る', 'git diff'],
+      ['git diff --staged', 'ステージ済みの変更を見る', 'git diff --staged'],
+      ['git restore <file>', '作業中の変更を捨てて、最後の状態に戻す', 'git restore app.js'],
+      ['git restore --staged <file>', 'ステージから外す (変更自体は残る)', 'git restore --staged .env'],
+      ['git rm <file>', 'ファイルを削除して、その削除をステージする', 'git rm old.html'],
+      ['git mv <a> <b>', 'ファイル名を変更する', 'git mv a.txt b.txt'],
+      ['.gitignore', 'Git で管理したくないファイルのパターンを書くファイル', 'echo "*.log" > .gitignore'],
+    ],
+  },
+  {
+    cat: '履歴を見る',
+    items: [
+      ['git log', 'コミット履歴を見る。--oneline で1行表示、--all で全ブランチ', 'git log --oneline --all'],
+      ['git show <commit>', 'コミットの内容 (差分) を見る', 'git show HEAD'],
+      ['git reflog', 'HEAD がどう動いたかの記録。消えたコミットの救出に使う', 'git reflog'],
+    ],
+  },
+  {
+    cat: 'ブランチ',
+    items: [
+      ['git branch', 'ブランチ一覧。-a でリモートも、-vv で追跡情報も表示', 'git branch -vv'],
+      ['git branch <name>', '新しいブランチを作る (移動はしない)', 'git branch feature/login'],
+      ['git switch <name>', 'ブランチを移動する', 'git switch main'],
+      ['git switch -c <name>', 'ブランチを作って移動する', 'git switch -c feature/login'],
+      ['git checkout <name>', '昔からある移動コマンド (-b で作成+移動)', 'git checkout -b fix/typo'],
+      ['git branch -d <name>', 'マージ済みのブランチを削除 (-D で強制)', 'git branch -d feature/login'],
+      ['git merge <branch>', '指定したブランチを今のブランチに取り込む', 'git merge feature/login'],
+      ['git merge --abort', '競合したマージを中止して元に戻す', 'git merge --abort'],
+      ['git rebase <branch>', '自分のコミットを相手の先端に付け替えて一直線にする', 'git rebase main'],
+      ['git rebase --continue', '競合を解決したらリベースを続ける (--abort で中止)', 'git rebase --continue'],
+      ['git tag <name>', 'コミットに名前(タグ)を付ける。リリース番号など', 'git tag v1.0'],
+    ],
+  },
+  {
+    cat: '共同作業 (リモート)',
+    items: [
+      ['git remote add origin <URL>', 'リモートリポジトリを登録する', 'git remote add origin https://github.com/you/my-app.git'],
+      ['git remote -v', '登録されたリモートを確認', 'git remote -v'],
+      ['git push -u origin <branch>', '初回の push。-u で追跡先を設定、次からは git push だけでOK', 'git push -u origin main'],
+      ['git push', 'ローカルのコミットをリモートに送る', 'git push'],
+      ['git fetch', 'リモートの最新情報を取ってくる (自分のブランチは変わらない)', 'git fetch'],
+      ['git pull', 'fetch + merge。リモートの変更を取り込む', 'git pull'],
+      ['git pull --rebase', 'fetch + rebase。マージコミットを作らず取り込む', 'git pull --rebase'],
+      ['git push origin --delete <branch>', 'リモートのブランチを削除', 'git push origin --delete feature/old'],
+      ['git push origin <tag>', 'タグを送る (--tags で全部)', 'git push origin v1.0'],
+      ['gh pr create', 'GitHub でプルリクエストを作る (シミュレーション)', 'gh pr create --title "ログイン機能"'],
+      ['gh pr merge <番号>', 'プルリクエストをマージする', 'gh pr merge 1'],
+    ],
+  },
+  {
+    cat: '便利技・取り消し',
+    items: [
+      ['git stash', '作業中の変更を一時退避する (-u で新規ファイルも)', 'git stash'],
+      ['git stash pop', '退避した変更を戻す', 'git stash pop'],
+      ['git stash list', '退避一覧', 'git stash list'],
+      ['git reset --soft <commit>', 'コミットだけ取り消す (変更はステージに残る)', 'git reset --soft HEAD~1'],
+      ['git reset <commit>', 'コミットとステージを取り消す (変更は作業ディレクトリに残る)', 'git reset HEAD~1'],
+      ['git reset --hard <commit>', '全部その時点に戻す。変更は消えるので注意！', 'git reset --hard HEAD~1'],
+      ['git revert <commit>', 'コミットを打ち消す新しいコミットを作る。push済みならこちら', 'git revert HEAD'],
+      ['git cherry-pick <commit>', '別ブランチの特定のコミットだけ取り込む', 'git cherry-pick a1b2c3d'],
+      ['git clean -f', '追跡していないファイルを削除 (-n で確認だけ)', 'git clean -n'],
+    ],
+  },
+  {
+    cat: 'ターミナル',
+    items: [
+      ['ls / ls -a', 'ファイル一覧', 'ls'],
+      ['cat <file>', '中身を見る', 'cat README.md'],
+      ['echo "文字" > file', 'ファイルに書き込む (>> で追記)', 'echo "hello" > hello.txt'],
+      ['edit <file>', 'エディタで編集 (nano / vim / code も可)', 'edit index.html'],
+      ['mkdir / cd', 'フォルダ作成 / 移動', 'mkdir my-app && cd my-app'],
+    ],
+  },
+];
+
+export const REF_SYNTAX = [
+  ['HEAD', '今のコミット'],
+  ['HEAD~1 / HEAD^', '1つ前のコミット (HEAD~2 で2つ前)'],
+  ['a1b2c3d', 'コミットID (先頭4文字以上でOK)'],
+  ['origin/main', 'リモート追跡ブランチ'],
+  ['HEAD@{1}', 'reflog で1つ前にHEADがあった場所'],
+  ['main..feature', 'feature にあって main にないコミット'],
+];
+
+// 初めて使ったときに出る解説
+export const FIRST_TIME = {
+  init: 'git init: このフォルダに .git (履歴の保管庫) が作られ、Gitで管理できるようになりました。',
+  clone: 'git clone: リモートの全履歴をコピーし、origin という名前でリモートが登録されます。',
+  status: 'git status: 今どのブランチにいて、どのファイルが変更・ステージされているかが分かります。迷ったらまずこれ！',
+  add: 'git add: 変更を「ステージングエリア」に載せました。次のコミットに含まれます。右の「ステージ」欄を見てみよう。',
+  commit: 'git commit: ステージした変更を1つの記録(コミット)として保存しました。グラフに点が増えたはず！',
+  log: 'git log: これまでのコミットの一覧です。新しいものが上に表示されます。',
+  diff: 'git diff: 変更の中身です。+ が追加された行、- が削除された行。',
+  branch: 'git branch: ブランチは「コミットを指す付箋」。作るのは一瞬で、コピーもしません。',
+  switch: 'git switch: ブランチを移動しました。作業ディレクトリのファイルがそのブランチの状態に変わります。',
+  checkout: 'git checkout: ブランチの移動やファイルの復元をする昔からのコマンド。新しい Git では switch / restore に分かれています。',
+  merge: 'git merge: 指定したブランチの変更を、今いるブランチに取り込みます。',
+  remote: 'git remote: リモート(GitHubなど)の登録・確認をします。',
+  push: 'git push: ローカルのコミットをリモートに送りました。右上の「GitHub」タブで確認できます。',
+  fetch: 'git fetch: リモートの最新状態を取得しました。origin/○○ が更新されますが、自分のブランチはそのままです。',
+  pull: 'git pull: fetch + merge を一度に行います。リモートの変更が今のブランチに取り込まれます。',
+  stash: 'git stash: 作業中の変更を一時的に退避しました。git stash pop で戻せます。',
+  restore: 'git restore: ファイルを元に戻します。--staged を付けるとステージから外すだけ。',
+  reset: 'git reset: ブランチの指す位置を過去に戻します。--hard は作業内容も消えるので慎重に。',
+  revert: 'git revert: 指定コミットを打ち消す新しいコミットを作ります。履歴を書き換えないので安全。',
+  rebase: 'git rebase: 自分のコミットを別の場所に「付け替え」ます。履歴が一直線になります。',
+  'cherry-pick': 'git cherry-pick: 特定のコミットだけをコピーして今のブランチに適用します。',
+  tag: 'git tag: コミットに v1.0 のような名前を付けます。リリースの目印に。',
+  show: 'git show: コミットの詳細と差分を表示します。',
+  reflog: 'git reflog: HEAD の移動履歴。reset で消したコミットもここから探せます。',
+  gh: 'gh: GitHub CLI。ここではリポジトリ作成やプルリクエストを簡易的にシミュレーションしています。',
+};
