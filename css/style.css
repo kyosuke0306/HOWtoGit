@@ -476,3 +476,32 @@ a.lesson-card > .i { color: var(--muted); }
 @media (min-width: 960px) {
   .screen-home, .screen-lessons { padding: 32px; }
 }
+
+/* ===== コピーボタン ===== */
+.copy-btn { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; width: 30px; height: 26px; margin-left: 6px; padding: 0; border-radius: 6px; border: 1px solid #30363d; background: #161b22; color: #8b949e; cursor: pointer; }
+.copy-btn .i { width: 15px; height: 15px; }
+.copy-btn:active { background: #30363d; color: #e6edf3; }
+.mission .copy-btn { background: var(--bg-raised); border-color: var(--border); color: var(--muted); }
+
+/* ===== スマホ用キーボード ===== */
+.kb { display: none; flex: none; background: #1c2128; padding: 6px 3px calc(6px + env(safe-area-inset-bottom)); user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+body.kb-open .kb { display: block; }
+body.kb-open .tabbar { display: none; }
+body.kb-open .mission { max-height: 30%; }
+body.kb-open .enter-btn { display: none; }
+.kb-row { display: flex; gap: 4px; margin-bottom: 6px; }
+.kb-row:last-child { margin-bottom: 0; }
+.kb-key { flex: 1; min-width: 0; height: 42px; border: 0; border-radius: 6px; background: #3a414b; color: #e6edf3; font-family: var(--mono); font-size: 17px; padding: 0; display: grid; place-items: center; box-shadow: 0 1px 0 rgba(0, 0, 0, .5); cursor: pointer; }
+.kb-key.fn { background: #2b3139; font-size: 13px; font-family: var(--sans); }
+.kb-key.on { background: #e6edf3; color: #0d1117; }
+.kb-key.enter { background: #238636; font-size: 18px; }
+.kb-key.down { background: #58606b; }
+.kb-key .i { width: 20px; height: 20px; }
+.kb-extra .kb-key { height: 36px; font-size: 13px; background: #2b3139; }
+.kb-extra .kb-key[data-k="TAB"] { color: #79c0ff; font-weight: 700; }
+body.kb-open .mission { max-height: 24%; }
+body.kb-open .quick { padding: 4px 10px; }
+body.kb-open .term-input { padding-top: 2px; padding-bottom: 4px; }
+.kb-key { height: 38px; }
+.kb-extra .kb-key { height: 32px; }
+.kb-row { margin-bottom: 5px; }

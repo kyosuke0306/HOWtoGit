@@ -8,6 +8,7 @@ import { MISSIONS, FIRST_MISSION } from './missions.js';
 import { createApi, buildTeamRemote, TEAM_URL, FILES } from './scenario.js';
 import { COMMANDS, CONCEPTS, REF_SYNTAX, FIRST_TIME } from './docs.js';
 import { icon, avatar, injectSprite } from './icons.js';
+import { createKeyboard } from './keyboard.js';
 
 injectSprite();
 
@@ -80,6 +81,7 @@ function termHtml(html, cls = '') {
   const div = document.createElement('div');
   div.className = 'line ' + cls;
   div.innerHTML = html;
+  if (cls !== 'cmdline') addCopyButtons(div);
   out.appendChild(div);
 }
 function scrollTerm() { out.scrollTop = out.scrollHeight; }
@@ -124,42 +126,160 @@ function explainFirstTime(line) {
 // ---------- 入力 ----------
 const input = $('#cmd');
 let histIdx = -1;
-input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') {
-    const v = input.value;
-    input.value = '';
-    histIdx = -1;
-    if (v.trim()) runCommand(v);
-    else { termHtml(promptHtml(), 'cmdline'); scrollTerm(); }
-    return;
-  }
+
+function submitInput() {
+  const v = input.value;
+  input.value = '';
+  histIdx = -1;
+  if (v.trim()) runCommand(v);
+  else { termHtml(promptHtml(), 'cmdline'); scrollTerm(); }
+}
+function histMove(dir) {
   const hist = game.shell.history;
-  if (e.key === 'ArrowUp') {
-    e.preventDefault();
-    if (!hist.length) return;
-    histIdx = histIdx < 0 ? hist.length - 1 : Math.max(0, histIdx - 1);
-    input.value = hist[histIdx];
-  } else if (e.key === 'ArrowDown') {
-    e.preventDefault();
+  if (!hist.length) return;
+  if (dir < 0) histIdx = histIdx < 0 ? hist.length - 1 : Math.max(0, histIdx - 1);
+  else {
     if (histIdx < 0) return;
     histIdx++;
-    if (histIdx >= hist.length) { histIdx = -1; input.value = ''; } else input.value = hist[histIdx];
-  } else if (e.key === 'Tab') {
-    e.preventDefault();
-    const r = game.shell.complete(input.value);
-    if (r.cands.length === 1) input.value = r.prefix + r.cands[0] + ' ';
-    else if (r.cands.length > 1) {
-      let common = r.cands[0];
-      for (const c of r.cands) while (!c.startsWith(common)) common = common.slice(0, -1);
-      if (common.length > r.last.length) input.value = r.prefix + common;
-      else { termLine(r.cands.join('   '), 'dim'); scrollTerm(); }
-    }
-  } else if (e.key === 'l' && e.ctrlKey) {
-    e.preventDefault();
-    out.innerHTML = '';
+    if (histIdx >= hist.length) { histIdx = -1; input.value = ''; return; }
   }
+  input.value = hist[histIdx];
+  const n = input.value.length;
+  input.setSelectionRange(n, n);
+}
+function tabComplete() {
+  const r = game.shell.complete(input.value);
+  if (r.cands.length === 1) input.value = r.prefix + r.cands[0] + ' ';
+  else if (r.cands.length > 1) {
+    let common = r.cands[0];
+    for (const c of r.cands) while (!c.startsWith(common)) common = common.slice(0, -1);
+    if (common.length > r.last.length) input.value = r.prefix + common;
+    else { termLine(r.cands.join('   '), 'dim'); scrollTerm(); }
+  }
+  const n = input.value.length;
+  input.setSelectionRange(n, n);
+}
+function insertText(t) {
+  const s0 = input.selectionStart ?? input.value.length, e0 = input.selectionEnd ?? s0;
+  input.value = input.value.slice(0, s0) + t + input.value.slice(e0);
+  const p = s0 + t.length;
+  input.setSelectionRange(p, p);
+}
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); submitInput(); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); histMove(-1); }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); histMove(1); }
+  else if (e.key === 'Tab') { e.preventDefault(); tabComplete(); }
+  else if (e.key === 'l' && e.ctrlKey) { e.preventDefault(); out.innerHTML = ''; }
 });
-$('#terminal').addEventListener('click', (e) => { if (!isMobile() && !window.getSelection().toString() && !e.target.closest('button')) input.focus(); });
+$('#terminal').addEventListener('click', (e) => {
+  if (e.target.closest('button') || window.getSelection().toString()) return;
+  if (!isMobile()) input.focus();
+});
+
+// ---------- スマホ用キーボード ----------
+const isTouch = () => matchMedia('(pointer: coarse)').matches;
+let clip = '';
+createKeyboard($('#kb'), {
+  onText: (t) => insertText(t),
+  onKey: (k) => {
+    const pos = input.selectionStart ?? input.value.length;
+    if (k === 'ENTER') submitInput();
+    else if (k === 'BS') {
+      const e0 = input.selectionEnd ?? pos;
+      if (e0 > pos) insertText('');
+      else if (pos > 0) { input.value = input.value.slice(0, pos - 1) + input.value.slice(pos); input.setSelectionRange(pos - 1, pos - 1); }
+    }
+    else if (k === 'TAB') tabComplete();
+    else if (k === 'LEFT') input.setSelectionRange(Math.max(0, pos - 1), Math.max(0, pos - 1));
+    else if (k === 'RIGHT') input.setSelectionRange(pos + 1, pos + 1);
+    else if (k === 'UP') histMove(-1);
+    else if (k === 'DOWN') histMove(1);
+    else if (k === 'PASTE') pasteClip();
+    else if (k === 'OSKB') useOsKeyboard();
+    else if (k === 'HIDE') closeKb();
+  },
+});
+function openKb() {
+  if (!isTouch() || document.body.classList.contains('kb-open')) return;
+  input.setAttribute('inputmode', 'none');
+  document.body.classList.add('kb-open');
+  setTimeout(scrollTerm, 50);
+}
+let kbClosedAt = 0;
+function closeKb() {
+  kbClosedAt = Date.now();
+  document.body.classList.remove('kb-open');
+  input.blur();
+}
+// 日本語などを入れたいときはスマホ標準のキーボードに切り替え
+function useOsKeyboard() {
+  document.body.classList.remove('kb-open');
+  input.setAttribute('inputmode', 'text');
+  input.blur();
+  setTimeout(() => input.focus(), 50);
+  document.body.classList.add('typing');
+}
+async function pasteClip() {
+  let t = clip;
+  if (!t && navigator.clipboard && navigator.clipboard.readText) {
+    try { t = await navigator.clipboard.readText(); } catch (e) { /* 読めない環境 */ }
+  }
+  if (t) insertText(t.trim());
+  else toast('コピーしたものがありません');
+}
+if (isTouch()) input.setAttribute('inputmode', 'none');
+input.addEventListener('focus', () => {
+  if (isTouch() && input.getAttribute('inputmode') === 'none') openKb();
+  else document.body.classList.add('typing');
+});
+input.addEventListener('blur', () => setTimeout(() => {
+  if (document.activeElement === input) return;
+  document.body.classList.remove('typing');
+  if (isTouch()) input.setAttribute('inputmode', 'none');
+}, 100));
+// ターミナルの外をタップしたらキーボードを閉じる
+document.addEventListener('pointerdown', (e) => {
+  if (!document.body.classList.contains('kb-open')) return;
+  // キーを押すと再描画でボタンが外れるため、押した時点の経路で判定する
+  const inside = e.composedPath().some((n) => n.nodeType === 1 && n.matches('#terminal, .modal, .copy-btn'));
+  if (!inside) closeKb();
+});
+$('#term-out').addEventListener('click', (e) => {
+  if (Date.now() - kbClosedAt < 500) return; // 閉じた直後のタップで開き直さない
+  if (isTouch() && !e.target.closest('button') && !window.getSelection().toString()) input.focus();
+});
+
+// ---------- コピー ----------
+function copyText(t) {
+  clip = t;
+  const done = () => toast(`${icon('check')} コピーしました`);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, () => { fallbackCopy(t); done(); });
+  else { fallbackCopy(t); done(); }
+}
+function fallbackCopy(t) {
+  const ta = document.createElement('textarea');
+  ta.value = t;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;opacity:0';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch (e) { /* 無視 */ }
+  ta.remove();
+}
+const URL_RE = /https?:\/\/[^\s'"<>)]+[^\s'"<>).,、。]/g;
+function addCopyButtons(el) {
+  const urls = [...new Set(el.textContent.match(URL_RE) || [])];
+  urls.forEach((u) => el.insertAdjacentHTML('beforeend', `<button type="button" class="copy-btn" data-copy="${esc(u)}" title="コピー" aria-label="${esc(u)} をコピー">${icon('copy')}</button>`));
+}
+document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('.copy-btn') && document.activeElement === input) e.preventDefault();
+});
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.copy-btn');
+  if (b) { e.preventDefault(); e.stopPropagation(); copyText(b.dataset.copy); }
+});
 
 function insertCommand(cmd, caret) {
   input.value = cmd;
@@ -169,18 +289,18 @@ function insertCommand(cmd, caret) {
   input.setSelectionRange(pos, pos);
 }
 
-document.querySelectorAll('#quick button').forEach((b) => b.addEventListener('click', () => {
-  if (b.dataset.run) runCommand(b.dataset.run);
-  else insertCommand(b.dataset.insert, Number(b.dataset.caret || 0));
-}));
+document.querySelectorAll('#quick button').forEach((b) => {
+  b.addEventListener('pointerdown', (e) => { if (document.body.classList.contains('kb-open')) e.preventDefault(); });
+  b.addEventListener('click', () => {
+    if (b.dataset.run) runCommand(b.dataset.run);
+    else insertCommand(b.dataset.insert, Number(b.dataset.caret || 0));
+  });
+});
+$('#btn-enter').addEventListener('pointerdown', (e) => { if (document.activeElement === input) e.preventDefault(); });
 $('#btn-enter').onclick = () => {
-  const v = input.value;
-  input.value = '';
-  if (v.trim()) runCommand(v);
-  input.focus();
+  submitInput();
+  if (!isTouch()) input.focus();
 };
-input.addEventListener('focus', () => document.body.classList.add('typing'));
-input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) document.body.classList.remove('typing'); }, 100));
 
 // ---------- 画面切替 (スマホ) ----------
 const isMobile = () => matchMedia('(max-width: 959px)').matches;
@@ -478,6 +598,7 @@ function renderChallengePanel() {
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
     ${status}
     <div class="m-actions">${actions}</div>`;
+  $('#mission').querySelectorAll('.story p, .hints li').forEach(addCopyButtons);
   if ($('#btn-hint')) $('#btn-hint').onclick = showHint;
   if ($('#btn-skip')) $('#btn-skip').onclick = skipMission;
   if ($('#btn-next')) $('#btn-next').onclick = nextMission;
