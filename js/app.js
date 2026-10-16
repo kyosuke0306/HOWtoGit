@@ -485,7 +485,6 @@ function renderStageCard() {
 }
 
 // ---------- チャレンジ (依頼が飛んでくる) ----------
-let timer = null;
 function startChallenge() {
   game.mode = 'challenge';
   const w = new World();
@@ -517,33 +516,14 @@ function beginMission(def) {
     setTimeout(() => teamToast(who, 'ちょっと修正して push しました'), 1200);
   }
   try { if (def.setup) def.setup(api, c.mem); } catch (e) { console.error(e); }
-  c.deadline = Date.now() + (def.time || 180) * 1000;
-  c.total = (def.time || 180) * 1000;
   termHtml(`<div class="banner mission-banner">${icon('mail')} 依頼 ${c.n}: ${esc(def.title)}</div>`);
-  if (navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* 無視 */ }
+  if (def !== FIRST_MISSION && navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* 無視 */ }
   renderAll();
   const card = $('#req');
   card.classList.remove('arrive');
   void card.offsetWidth;
   card.classList.add('arrive');
-  startTimer();
 }
-
-function startTimer() {
-  clearInterval(timer);
-  timer = setInterval(() => {
-    const c = game.ch;
-    if (game.mode !== 'challenge' || !c || c.result || c.state !== 'playing') { clearInterval(timer); return; }
-    const left = c.deadline - Date.now();
-    const bar = $('#req .timer i');
-    const txt = $('#req .timer-text');
-    if (bar) bar.style.width = `${Math.max(0, (left / c.total) * 100)}%`;
-    if (txt) txt.textContent = fmtTime(left);
-    if (bar) bar.parentElement.classList.toggle('low', left < 30000);
-    if (left <= 0) missionFail('時間切れ…');
-  }, 250);
-}
-const fmtTime = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 function pickNextMission() {
   const c = game.ch;
@@ -578,11 +558,9 @@ function missionSuccess() {
   const m = c.mission;
   c.result = 'success';
   c.streak++;
-  const left = Math.max(0, c.deadline - Date.now());
   const hintRate = Math.max(0.4, 1 - c.hints * 0.15);
   const streakRate = 1 + Math.min(0.5, (c.streak - 1) * 0.1);
-  const speed = Math.round((left / c.total) * 50);
-  const bonus = (c.mem.bonus || 0) + speed;
+  const bonus = c.mem.bonus || 0;
   const pts = Math.round(m.points * hintRate * streakRate) + bonus;
   c.score += pts;
   gainXp(Math.round(pts / 3));
@@ -590,7 +568,7 @@ function missionSuccess() {
   termHtml(`<div class="banner success">${icon('check-circle')} 成功！ +${pts}</div>`);
   confetti();
   renderAll();
-  setTimeout(() => resultSheet(true, pts, speed), 700);
+  setTimeout(() => resultSheet(true, pts), 700);
 }
 
 function missionFail(reason) {
@@ -607,13 +585,13 @@ function missionFail(reason) {
   setTimeout(() => resultSheet(false), 600);
 }
 
-function resultSheet(ok, pts = 0, speed = 0) {
+function resultSheet(ok, pts = 0) {
   const c = game.ch;
   const m = c.mission;
   const over = c.state === 'over';
   showResult({
     title: ok ? `${icon('check-circle')} 成功！` : `${icon('x-circle')} 失敗`,
-    body: `${ok ? `<p class="big-score">+${pts}</p>${speed ? `<p class="muted">スピードボーナス +${speed}</p>` : ''}` : `<p class="fail-reason">${esc(c.failReason)}</p>`}
+    body: `${ok ? `<p class="big-score">+${pts}</p>` : `<p class="fail-reason">${esc(c.failReason)}</p>`}
       <div class="lesson-box"><b>${icon('info')} 判断のポイント</b><p>${m.lesson || ''}</p></div>
       ${m.answer ? `<div class="answer-box"><b>模範解答</b><code>${esc(m.answer)}</code></div>` : ''}
       ${over ? `<p class="big-score">${c.score}</p><p>${c.score >= save.best ? `${icon('trophy')} ハイスコア！` : `ベスト ${save.best}`}</p>` : ''}`,
@@ -643,7 +621,6 @@ function renderChallengeCard() {
   const hints = (typeof m.hints === 'function' ? m.hints(c.mem) : m.hints) || [];
   const shown = hints.slice(0, c.hints).map((h) => `<li>${esc(h)}</li>`).join('');
   const hp = Math.max(0, c.hearts);
-  const left = c.result ? 0 : c.deadline - Date.now();
   $('#req').innerHTML = `
     <div class="req-head">
       <span class="badge challenge">依頼 ${c.n}</span>
@@ -651,7 +628,6 @@ function renderChallengeCard() {
       <span class="stats-inline"><span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span>${c.streak > 1 ? `<span class="streak">${icon('flame')}${c.streak}</span>` : ''}<span class="score">${c.score}</span></span>
     </div>
     <div class="story"><div class="avatar">${avatar(m.who, 34)}</div><div><p>${story}</p>${m.detail ? `<p class="detail muted">${m.detail}</p>` : ''}</div></div>
-    ${c.result ? '' : `<div class="timer-row"><div class="timer"><i style="width:${Math.max(0, (left / c.total) * 100)}%"></i></div><span class="timer-text">${fmtTime(left)}</span></div>`}
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
     <div class="req-actions">
       ${c.state === 'over' ? `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度</button>`
@@ -890,7 +866,6 @@ function setScreen(name, title = '') {
   document.body.dataset.screen = name;
   $('#screen-title').textContent = title;
   closeModal();
-  if (name !== 'play') clearInterval(timer);
   renderStats();
 }
 function go(hash) {
@@ -909,7 +884,7 @@ function route() {
   }
   if (h === 'challenge') {
     if (!(game.mode === 'challenge' && game.ch && game.ch.state === 'playing')) startChallenge();
-    else { setScreen('play', 'チャレンジ'); if (!game.ch.result) startTimer(); }
+    else setScreen('play', 'チャレンジ');
     return;
   }
   if (h === 'free') {

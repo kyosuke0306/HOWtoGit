@@ -350,11 +350,6 @@ a.lesson-card > .i { color: var(--muted); }
 .story { display: flex; gap: 10px; align-items: flex-start; margin-top: 6px; }
 .story p { margin: 0; font-size: 15px; line-height: 1.55; }
 .story .detail { margin-top: 4px; font-size: 12px; word-break: break-all; }
-.timer-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-.timer { flex: 1; height: 6px; border-radius: 3px; background: var(--bg-raised); overflow: hidden; }
-.timer i { display: block; height: 100%; background: var(--accent); transition: width .25s linear; }
-.timer.low i { background: var(--danger); }
-.timer-text { font-family: var(--mono); font-size: 12px; color: var(--muted); min-width: 3em; text-align: right; }
 .hints { margin: 8px 0 0; padding: 6px 10px 6px 26px; background: color-mix(in srgb, var(--warn) 10%, transparent); border-radius: 8px; font-family: var(--mono); font-size: 12.5px; }
 .free-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
 .t-err { color: var(--danger); }
