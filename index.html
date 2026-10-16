@@ -13,12 +13,9 @@
 </head>
 <body>
   <header class="topbar">
+    <button id="btn-home" class="btn icon btn-home" aria-label="トップへ"><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
     <div class="brand"><span class="logo"><svg class="i" aria-hidden="true"><use href="#i-logo"/></svg></span><span class="brand-text">HOW<em>to</em>Git</span></div>
-    <nav class="modes" aria-label="モード">
-      <button data-mode="lesson"><svg class="i" aria-hidden="true"><use href="#i-book"/></svg><span>レッスン</span></button>
-      <button data-mode="challenge"><svg class="i" aria-hidden="true"><use href="#i-gamepad"/></svg><span>チャレンジ</span></button>
-      <button data-mode="free"><svg class="i" aria-hidden="true"><use href="#i-flask"/></svg><span>フリー</span></button>
-    </nav>
+    <span id="screen-title" class="screen-title"></span>
     <div class="level" title="経験値 (XP)">
       <span class="lv">Lv<b id="lv">1</b></span>
       <div class="xpbar"><i id="xpfill"></i></div>
@@ -26,6 +23,9 @@
     <button id="btn-docs" class="btn icon" title="コマンド辞典" aria-label="コマンド辞典"><svg class="i" aria-hidden="true"><use href="#i-book-open"/></svg></button>
     <button id="btn-theme" class="btn icon" title="テーマ切替" aria-label="テーマ切替"><svg class="i" aria-hidden="true"><use href="#i-contrast"/></svg></button>
   </header>
+
+  <section class="screen-home" id="home"></section>
+  <section class="screen-lessons" id="lessons"></section>
 
   <main class="layout">
     <section class="view view-play active" data-view="play">
