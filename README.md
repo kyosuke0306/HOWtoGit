@@ -13,6 +13,8 @@ Git の使い方を **初心者向けに、ゲーム感覚で** 学べる Web �
 
 ### 3つのモード
 
+トップ画面から選びます。URL は `#/` (トップ)、`#/lessons`、`#/lesson/番号`、`#/challenge`、`#/free`。
+
 | モード | 内容 |
 |---|---|
 | レッスン | 全15レッスン。init / commit から branch・merge・競合・push・pull・stash・reset/revert・rebase・cherry-pick・tag・PR・.gitignore まで順番に |
