@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HOW to Git — 遊んで学ぶ Git シミュレーター</title>
+  <meta name="description" content="Git の使い方を初心者向けにゲーム感覚で学べるシミュレーター。疑似ターミナルでコマンドを打ち、ブランチの構造を視覚的に確認しながら、チーム開発のミッションに挑戦しよう。">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌱</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="logo">🌱</span> HOW<em>to</em>Git</div>
+    <nav class="modes" aria-label="モード">
+      <button data-mode="lesson">📘 レッスン</button>
+      <button data-mode="challenge">🎮 チャレンジ</button>
+      <button data-mode="free">🧪 フリー</button>
+    </nav>
+    <div class="stats">
+      <div class="level" title="経験値 (XP)">
+        <div class="lv-row"><span class="lv">Lv<b id="lv">1</b></span><span id="lv-title" class="lv-title">Git見習い</span><small id="xp-text"></small></div>
+        <div class="xpbar"><i id="xpfill"></i></div>
+      </div>
+      <div id="game-stats" class="game-stats"></div>
+    </div>
+    <div class="top-actions">
+      <button id="btn-docs" class="btn">📖 コマンド辞典</button>
+      <button id="btn-theme" class="btn icon" title="テーマ切替" aria-label="テーマ切替">🌓</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="col-left">
+      <div class="card mission" id="mission"></div>
+
+      <div class="terminal" id="terminal">
+        <div class="term-head">
+          <span class="dots"><i></i><i></i><i></i></span>
+          <span class="term-title">terminal — <span id="cwd-label">~</span></span>
+        </div>
+        <div class="term-out" id="term-out" aria-live="polite"></div>
+        <div class="term-input">
+          <span class="prompt" id="prompt"></span>
+          <input id="cmd" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="コマンド入力" placeholder="ここにコマンドを入力 (help で一覧)">
+        </div>
+      </div>
+      <div class="quick" id="quick">
+        <button data-cmd="git status">git status</button>
+        <button data-cmd="git log --oneline --all">git log --oneline --all</button>
+        <button data-cmd="git branch -a">git branch -a</button>
+        <button data-cmd="ls">ls</button>
+        <button data-cmd="hint">💡 hint</button>
+        <button data-cmd="help">help</button>
+      </div>
+    </section>
+
+    <section class="col-right">
+      <div class="card graph-card">
+        <div class="card-head">
+          <div class="tabs">
+            <button data-g="local" class="active">💻 ローカル</button>
+            <button data-g="remote">☁ GitHub <small id="remote-name"></small></button>
+          </div>
+          <div class="legend">
+            <span class="pill pill-branch current"><b>HEAD →</b> 今のブランチ</span>
+            <span class="pill pill-branch">ブランチ</span>
+            <span class="pill pill-remote">☁ リモート</span>
+            <span class="pill pill-tag">🏷 タグ</span>
+          </div>
+        </div>
+        <div id="graph" class="graph"></div>
+      </div>
+
+      <div class="card areas">
+        <div class="card-head"><h3>ファイルの状態</h3><span id="stashinfo" class="stashinfo"></span></div>
+        <div id="opbanner"></div>
+        <div class="area-cols">
+          <div class="area" id="area-work"><h4>📁 作業ディレクトリ</h4><div class="files"></div></div>
+          <div class="area-arrow"><span>git add</span>→</div>
+          <div class="area" id="area-stage"><h4>📋 ステージ</h4><div class="files"></div></div>
+          <div class="area-arrow"><span>git commit</span>→</div>
+          <div class="area" id="area-repo"><h4>📦 リポジトリ <small>(HEAD)</small></h4><div class="files"></div></div>
+        </div>
+        <div class="chip-legend"><span class="chip untracked"><i>U</i>未追跡</span><span class="chip modified"><i>M</i>変更</span><span class="chip staged"><i>A</i>ステージ済</span><span class="chip conflict"><i>⚠</i>競合</span></div>
+      </div>
+
+      <div class="card chat-card" id="chat-card">
+        <div class="card-head"><h3>💬 チームチャット</h3></div>
+        <div id="chat" class="chat"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">HOW to Git — ブラウザだけで動く Git 学習シミュレーター。実際のファイルや GitHub には影響しません。</footer>
+
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-head"><h2 id="modal-title"></h2><button id="modal-close" class="btn icon" aria-label="閉じる">✕</button></div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <div class="modal editor" id="editor" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-head"><h2>✏️ <span id="editor-file"></span></h2></div>
+      <div id="conflict-tools" class="conflict-tools">
+        <span>⚠ 競合マーカーがあります。手で直すか、ボタンで一括選択:</span>
+        <button class="btn small" data-resolve="ours">自分 (HEAD) を採用</button>
+        <button class="btn small" data-resolve="theirs">相手を採用</button>
+        <button class="btn small" data-resolve="both">両方残す</button>
+      </div>
+      <textarea id="editor-text" spellcheck="false"></textarea>
+      <div class="editor-actions">
+        <small class="muted">Ctrl+S で保存 / Esc でキャンセル</small>
+        <button id="editor-cancel" class="btn ghost">キャンセル</button>
+        <button id="editor-save" class="btn primary">💾 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toasts" class="toasts"></div>
+  <div id="confetti" class="confetti"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
