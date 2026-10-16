@@ -31,8 +31,8 @@ export const FIRST_MISSION = {
   id: 'clone',
   title: 'チームに参加しよう',
   who: '田中',
-  story: 'ようこそ Cafe Shop チームへ！まずはチームのリポジトリを手元にクローンして、そのフォルダに入ってね。',
-  detail: `URL: <code>${TEAM_URL}</code>`,
+  story: 'ようこそ！リポジトリを clone して中に入ってね。',
+  detail: `<code>${TEAM_URL}</code>`,
   points: 50,
   hints: ['git clone <URL> でコピーできます', `git clone ${TEAM_URL}`, 'cd cafe-shop でフォルダに入ろう'],
   check: (api) => (T(api) && api.cwd === tPath(api) ? 'success' : null),
@@ -48,7 +48,7 @@ export const MISSIONS = [
       m.name = api.pick(['access', 'news', 'coupon', 'recruit', 'faq', 'gallery']);
       m.branch = `feature/${m.name}`;
       m.file = `${m.name}.html`;
-      m.story = `新しく「${m.name}」ページを作りたいです！ <b>${m.branch}</b> ブランチで <b>${m.file}</b> を作ってコミットし、GitHub に push してください。`;
+      m.story = `<b>${m.branch}</b> で <b>${m.file}</b> を作って push して！`;
     },
     can: (api) => true,
     hints: (m) => ['まずは main から作業ブランチを作ろう: git switch -c ' + m.branch, `ファイルを作る: echo "<h1>${m.name}</h1>" > ${m.file}`, 'git add → git commit -m "..."', `初回の push: git push -u origin ${m.branch}`],
@@ -67,7 +67,7 @@ export const MISSIONS = [
       const menu = treeOfRemote(api, 'main')['menu.txt'] || FILES['menu.txt'];
       api.teammatePush('main', { 'menu.txt': menu + item + '\n' }, `メニューに${item.split(' ')[0]}を追加`, '佐藤');
       if (Math.random() < 0.5) api.teammatePush('main', { 'info.txt': '営業時間: 9:00-18:00\n' }, '営業時間を追記', '田中');
-      m.story = `メニューに「${item}」を追加して GitHub に push しました！あなたのローカルの <b>main</b> も最新にしておいてください。`;
+      m.story = `メニューを更新したよ。ローカルの <b>main</b> を最新にして！`;
     },
     hints: () => ['main ブランチにいるか確認 (git switch main)', 'git pull でリモートの変更を取り込めます', 'git fetch → git merge origin/main でもOK'],
     check(api) {
@@ -84,7 +84,7 @@ export const MISSIONS = [
     setup(api, m) {
       m.readme = treeOfRemote(api, 'main')['README.md'];
       m.tc = api.teammatePush('main', { 'style.css': (treeOfRemote(api, 'main')['style.css'] || '') + `/* 調整 ${rnd(100)} */\n` }, 'スタイルを微調整', '田中');
-      m.story = 'README.md の「メンバー」にあなたの名前を追加して、<b>main</b> に push してください。(ちなみに田中さんもさっき何か push してたような…)';
+      m.story = 'README.md に名前を追加して <b>main</b> に push して！';
     },
     hints: () => ['git switch main → README.md に追記 (echo "- 名前" >> README.md)', 'git commit -am "メンバーに追加" → git push', 'rejected になったら git pull してからもう一度 git push！'],
     check(api, evs, m) {
@@ -112,7 +112,7 @@ export const MISSIONS = [
       m.badId = api.teammatePush(m.bad, { 'menu.txt': changed(480) }, `${name}の値段を見直し`, '田中', 'main');
       m.goodId = api.teammatePush(m.good, { 'hours.txt': '営業時間 9:00-18:00\n定休日 水曜\n' }, '営業時間のページを追加', '佐藤', 'main');
       api.teammatePush('main', { 'menu.txt': changed(450) }, `${name}を450円に値上げ`, '店長');
-      m.story = `店長が main の menu.txt を更新しました。<b>${m.bad}</b> と <b>${m.good}</b> のうち、<b>main と競合しない方だけ</b>を main にマージして push してください。<br><span class="t-err warn-line">競合を起こしたら失敗です！</span>`;
+      m.story = `<b>${m.bad}</b> と <b>${m.good}</b>、<b>競合しない方だけ</b> main にマージして push！<br><span class="t-err warn-line">競合したら失敗</span>`;
     },
     hints: (m) => ['git fetch でリモートの情報を取ってこよう', `git show origin/${m.bad} や git show origin/${m.good} で、それぞれ何を変更したか見てみよう`, 'git show origin/main で、店長がどのファイルを変えたかも確認', 'main と同じファイル・同じ行を変えている方が競合します'],
     check(api, evs, m) {
@@ -137,7 +137,7 @@ export const MISSIONS = [
       m.target = `${name} ${m.price}円`;
       const other = lines.slice(); other[idx] = `${name} ${m.price + 30}円`;
       m.tc = api.teammatePush('main', { 'menu.txt': other.join('\n') + '\n' }, `${name}の値段を変更`, '佐藤');
-      m.story = `menu.txt の「${name}」を <b>${m.price}円</b> に変更して main に push してください！<br><small>(佐藤さんも同じ行を変えたらしい…。競合したら <b>${m.target}</b> が正解です)</small>`;
+      m.story = `menu.txt の「${name}」を <b>${m.price}円</b> にして push！<br><small>競合したら ${m.target} が正解</small>`;
     },
     hints: (m) => [`menu.txt を編集: edit menu.txt で「${m.name}」の行を ${m.price}円 に`, 'コミットして push → 拒否されたら git pull', '競合したら edit menu.txt でマーカーを消して正しい値段に → git add → git commit → git push'],
     check(api, evs, m) {
@@ -162,7 +162,7 @@ export const MISSIONS = [
       const d = T(api);
       d.files['app.js'] = (d.files['app.js'] || '') + `\nfunction discount(price) {\n  ${m.wip}\n}\n`;
       api.w.cwd = p;
-      m.story = '割引機能 (feature/discount) の作業中にごめん！ GitHub の main の index.html に「あいます」という <b>誤字</b> が入ってしまった。main で「あります」に直して push して！<br><b>今の作業 (app.js の変更) は消さないでね。</b>';
+      m.story = '緊急！ main の index.html の誤字「あいます」を直して push。<br><b>作業中の app.js は消さないで！</b>';
     },
     hints: () => ['作業中の変更は git stash で退避できます', 'git switch main → git pull で最新に', 'edit index.html で誤字を直して commit → push', 'git switch feature/discount → git stash pop で作業を戻す'],
     check(api, evs, m) {
@@ -182,7 +182,7 @@ export const MISSIONS = [
       const menu = treeOfRemote(api, 'main')['menu.txt'] || FILES['menu.txt'];
       m.good = menu;
       m.bad = api.teammatePush('main', { 'menu.txt': menu.replace(/\d+円/g, '0円') }, 'テスト用に全部0円にした', '佐藤');
-      m.story = '大変！佐藤さんのテスト用コミット「テスト用に全部0円にした」が本番の main に入ってしまった！<b>git revert</b> で打ち消して push して。<br><span class="t-err warn-line">共有ブランチの履歴を書き換える reset + force push は厳禁！</span>';
+      m.story = '「テスト用に全部0円にした」が main に！ <b>revert</b> して push。<br><span class="t-err warn-line">force push 禁止</span>';
     },
     hints: () => ['git switch main → git pull で問題のコミットを取り込む', 'git log --oneline で問題のコミットIDを確認', 'git revert <ID> で打ち消しコミットを作る', 'git push で共有'],
     check(api, evs, m) {
@@ -200,7 +200,7 @@ export const MISSIONS = [
       const tags = Object.keys(api.remote().tags);
       m.tag = `v1.${tags.length}`;
       m.base = rmain(api);
-      m.story = `いよいよリリースです！ GitHub の main の最新コミットに <b>${m.tag}</b> タグを付けて、GitHub に push してください。`;
+      m.story = `main の最新に <b>${m.tag}</b> タグを付けて push！`;
     },
     hints: (m) => ['git switch main → git pull で最新に', `git tag ${m.tag}`, `タグは別途 push が必要: git push origin ${m.tag}`],
     check(api, evs, m) {
@@ -222,7 +222,7 @@ export const MISSIONS = [
       r.prs.push({ number: n, title: 'バナーを追加', head: m.branch, base: 'main', state: 'merged', author: '佐藤' });
       mergeOnRemote(api.w, r, 'main', m.branch, `Merge pull request #${n} from ${m.branch}`, '佐藤');
       api.sh(`git fetch && git branch ${m.branch} origin/${m.branch}`, tPath(api));
-      m.story = `<b>${m.branch}</b> はもうマージ済みで不要になりました。ローカルと GitHub の <b>両方</b> から削除して整理してください。`;
+      m.story = `マージ済みの <b>${m.branch}</b> を、ローカルと GitHub の<b>両方</b>から削除して！`;
     },
     hints: (m) => ['git branch -a でブランチ一覧を確認', `ローカルの削除: git branch -d ${m.branch}`, `リモートの削除: git push origin --delete ${m.branch}`],
     check(api, evs, m) {
@@ -241,7 +241,7 @@ export const MISSIONS = [
       m.file = `login-${rnd(900) + 100}.html`;
       api.sh(`echo "<form>ログイン</form>" > ${m.file} && git add ${m.file} && git commit -m "ろぐいん画面をついか"`, p);
       m.bad = headId(T(api).repo);
-      m.story = 'あれ？ さっきのあなたのコミット、メッセージが「ろぐいん画面をついか」になってるよ。まだ push してないなら <b>「ログイン画面を追加」</b> に直しておいて！';
+      m.story = '直前のコミットが「ろぐいん画面をついか」に…<br><b>「ログイン画面を追加」</b>に直して！';
     },
     hints: () => ['git log --oneline で直前のコミットを確認', '直前のコミットを修正: git commit --amend -m "ログイン画面を追加"'],
     check(api, evs, m) {
@@ -266,7 +266,7 @@ export const MISSIONS = [
       T(api).files['share.js'] = 'function share() {\n  // SNSでシェア\n}\n';
       api.sh('git add .', p);
       m.start = headId(T(api).repo);
-      m.story = 'シェアボタン (share.js) をコミットしようとして、うっかり <b>パスワード入りの .env</b> までステージしちゃった！ .env をステージから外して、<b>share.js だけ</b>コミットして。<br><small>(ボーナス: .gitignore に .env を書いてコミットすると完璧)</small>';
+      m.story = 'パスワード入りの <b>.env</b> までステージしちゃった！<br><b>share.js だけ</b>コミットして。<small>(.gitignore でボーナス)</small>';
     },
     hints: () => ['git status でステージの状態を確認', 'ステージから外す: git restore --staged .env', 'git commit -m "シェアボタンを追加"', 'ボーナス: echo ".env" >> .gitignore && git add .gitignore'],
     check(api, evs, m) {
@@ -293,7 +293,7 @@ export const MISSIONS = [
       const app = treeOfRemote(api, 'experiment')['app.js'];
       m.fix = api.teammatePush('experiment', { 'app.js': app.replace('price * 10', 'Math.floor(price * 1.1)') }, 'バグ修正: 税込み価格の計算ミス', '佐藤');
       api.teammatePush('experiment', { 'bgm.js': 'playMusic("jazz.mp3");\n' }, '実験: BGMを追加', '佐藤');
-      m.story = '実験用の <b>experiment</b> ブランチに、税込み計算のバグ修正を入れちゃった。<b>「バグ修正」のコミットだけ</b>を main に取り込んで push してくれる？ 他の実験はまだ main に入れないで！';
+      m.story = '<b>experiment</b> の「バグ修正」コミット<b>だけ</b> main に入れて push して！';
     },
     hints: () => ['git fetch → git log --oneline origin/experiment でコミットIDを確認', 'git switch main → git pull', 'git cherry-pick <バグ修正のID>', 'git push'],
     check(api, evs, m) {
@@ -317,7 +317,7 @@ export const MISSIONS = [
       d.repo.branches[m.branch] = c2;
       api.teammatePush('main', { 'CHANGELOG.md': (treeOfRemote(api, 'main')['CHANGELOG.md'] || '# 変更履歴\n') + '- 田中: プロフィール機能の準備\n' }, '変更履歴を更新', '田中');
       api.teammatePush('main', { 'index.html': (treeOfRemote(api, 'main')['index.html'] || '').replace('</body>', '<footer>© Cafe Shop</footer>\n</body>') }, 'フッターを追加', '佐藤');
-      m.story = `あなたが昨日作った <b>${m.branch}</b> ブランチ、その後 main がかなり進んじゃった。<b>GitHub の main の最新</b>に <b>rebase</b> して、一直線の履歴にしてから push してね。(マージコミットは作らないで！)`;
+      m.story = `<b>${m.branch}</b> を最新の main に <b>rebase</b> して push！<br><small>マージコミットは禁止</small>`;
     },
     hints: (m) => ['git fetch で origin/main を最新に', `git switch ${m.branch}`, 'git rebase origin/main', `git push -u origin ${m.branch}`],
     check(api, evs, m) {
@@ -336,7 +336,7 @@ export const MISSIONS = [
     setup(api, m) {
       m.name = api.pick(['blog', 'event', 'shop-list', 'reserve', 'map']);
       m.branch = `feature/${m.name}`;
-      m.story = `「${m.name}」ページをお願い！今回は <b>Pull Request</b> 経由で。<b>${m.branch}</b> ブランチで ${m.name}.html を作り、push → PR 作成 → マージ。最後にローカルの main も最新にしてね。`;
+      m.story = `<b>${m.branch}</b> で ${m.name}.html を作り、<b>PR でマージ</b>。最後に main を最新に！`;
     },
     hints: (m) => [`git switch main → git switch -c ${m.branch}`, `echo "..." > ${m.name}.html → add → commit`, `git push -u origin ${m.branch}`, 'gh pr create --title "..." → gh pr merge <番号>', 'git switch main → git pull'],
     check(api, evs, m) {
@@ -356,7 +356,7 @@ export const MISSIONS = [
       api.teammatePush(m.branch, { 'menu.txt': menu + 'レモネード 450円\n' }, 'レモネードを追加', '佐藤', 'main');
       m.number = ++api.w.prCounter;
       api.remote().prs.push({ number: m.number, title: 'レモネードを追加', head: m.branch, base: 'main', state: 'open', author: '佐藤' });
-      m.story = `PR #${m.number}「レモネードを追加」を作りました！確認してマージお願いします！ マージしたら、あなたのローカルの main も更新しておいてね。`;
+      m.story = `PR #${m.number} をマージして、ローカルの main も更新して！`;
     },
     hints: (m) => ['gh pr list で PR 一覧を確認', `gh pr view ${m.number} で内容を確認`, `gh pr merge ${m.number}`, 'git switch main → git pull'],
     check(api, evs, m) {
@@ -376,7 +376,7 @@ export const MISSIONS = [
       api.w.cwd = tPath(api);
       m.file = api.pick(Object.keys(api.w.tree(headId(d.repo))).filter((f) => /\.(js|html|css|txt)$/.test(f)));
       d.files[m.file] = 'ああああああああ (猫がキーボードの上を歩いた)\n';
-      m.story = `大変、<b>${m.file}</b> が猫に荒らされた！ 最後にコミットした状態に戻して。`;
+      m.story = `<b>${m.file}</b> を壊しちゃった！最後のコミットに戻して。`;
     },
     hints: (m) => ['git status / git diff で状態を確認', `git restore ${m.file} で最後のコミットの状態に戻せます`],
     check(api, evs, m) {
@@ -398,7 +398,7 @@ export const MISSIONS = [
       m.content = '<form>お問い合わせフォーム</form>\n';
       T(api).files[m.file] = m.content;
       api.sh(`git add ${m.file} && git commit -m "お問い合わせフォームを追加" && git reset --hard HEAD~1`, p);
-      m.story = 'あっ…さっきあなたが作った「お問い合わせフォームを追加」のコミット、<b>git reset --hard</b> で消しちゃったみたい！ <b>reflog</b> で探して、今のブランチに復活させて！';
+      m.story = '「お問い合わせフォームを追加」を reset で消しちゃった！<b>reflog</b> で復活させて。';
     },
     hints: () => ['git reflog で HEAD の移動履歴を見よう', '「commit: お問い合わせフォームを追加」の行の ID か HEAD@{n} を探す', 'git reset --hard <ID> や git cherry-pick <ID> で復活'],
     check(api, evs, m) {
@@ -417,7 +417,7 @@ export const MISSIONS = [
       const d = T(api);
       api.w.cwd = tPath(api);
       Object.assign(d.files, { 'debug.log': 'ERROR 2026-04-01 something wrong\n', 'node_modules/jquery.js': '/* jQuery */\n', 'error.log': 'oops\n' });
-      m.story = '<b>*.log ファイル</b> と <b>node_modules/</b> フォルダはコミットしたくない。<b>.gitignore</b> を作ってコミットしてね。';
+      m.story = '<b>*.log</b> と <b>node_modules/</b> を無視する <b>.gitignore</b> をコミットして！';
     },
     hints: () => ['edit .gitignore で .gitignore を作成', '中身: *.log と node_modules/ の2行', 'git add .gitignore && git commit -m ".gitignoreを追加"'],
     check(api) {
@@ -439,7 +439,7 @@ export const MISSIONS = [
       api.teammatePush(m.branch, { 'news.html': '<h1>お知らせ</h1>\n' }, 'お知らせページを追加', '田中', 'main');
       m.tip = api.teammatePush(m.branch, { 'news.html': '<h1>お知らせ</h1>\n<p>新メニュー登場</p>\n' }, 'お知らせを追記', '田中');
       api.teammatePush('main', { 'style.css': (treeOfRemote(api, 'main')['style.css'] || '') + '.news { color: red; }\n' }, 'お知らせ用のスタイル', '佐藤');
-      m.story = `<b>${m.branch}</b> のレビューが終わったよ。あなたの手元で main に <b>マージ</b> して、GitHub に push してくれる？`;
+      m.story = `<b>${m.branch}</b> を main にマージして push して！`;
     },
     hints: (m) => ['git fetch で新しいブランチを取得', 'git switch main → git pull', `git merge origin/${m.branch}`, 'git push'],
     check(api, evs, m) {
