@@ -86,7 +86,7 @@ function scrollTerm() { out.scrollTop = out.scrollHeight; }
 
 function promptHtml() {
   const p = game.shell.prompt();
-  return `<span class="p-user">${esc(p.user)}@howtogit</span>:<span class="p-path">${esc(p.path)}</span><span class="p-branch">${esc(p.branch)}</span><span class="p-dollar">$</span>`;
+  return `<span class="p-user">${esc(p.user)}@howtogit:</span><span class="p-path">${esc(p.path)}</span><span class="p-branch">${esc(p.branch)}</span><span class="p-dollar">$</span>`;
 }
 function renderPrompt() { $('#prompt').innerHTML = promptHtml(); }
 
@@ -159,14 +159,44 @@ input.addEventListener('keydown', (e) => {
     out.innerHTML = '';
   }
 });
-$('#terminal').addEventListener('click', (e) => { if (!window.getSelection().toString() && !e.target.closest('button')) input.focus(); });
+$('#terminal').addEventListener('click', (e) => { if (!isMobile() && !window.getSelection().toString() && !e.target.closest('button')) input.focus(); });
 
-function insertCommand(cmd) {
+function insertCommand(cmd, caret) {
   input.value = cmd;
+  showView('play');
   input.focus();
+  const pos = caret ? cmd.length + caret : cmd.length;
+  input.setSelectionRange(pos, pos);
 }
 
-document.querySelectorAll('#quick button').forEach((b) => b.addEventListener('click', () => runCommand(b.dataset.cmd)));
+document.querySelectorAll('#quick button').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.run) runCommand(b.dataset.run);
+  else insertCommand(b.dataset.insert, Number(b.dataset.caret || 0));
+}));
+$('#btn-enter').onclick = () => {
+  const v = input.value;
+  input.value = '';
+  if (v.trim()) runCommand(v);
+  input.focus();
+};
+input.addEventListener('focus', () => document.body.classList.add('typing'));
+input.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== input) document.body.classList.remove('typing'); }, 100));
+
+// ---------- 画面切替 (スマホ) ----------
+const isMobile = () => matchMedia('(max-width: 959px)').matches;
+function showView(name) {
+  document.querySelectorAll('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === name));
+  document.querySelectorAll('.tabbar [data-view]').forEach((b) => {
+    b.classList.toggle('active', b.dataset.view === name);
+    if (b.dataset.view === name) b.classList.remove('dot');
+  });
+}
+function markUpdated(name) {
+  if (!isMobile()) return;
+  const v = document.querySelector(`.view[data-view="${name}"]`);
+  if (v && !v.classList.contains('active')) document.querySelector(`.tabbar [data-view="${name}"]`).classList.add('dot');
+}
+document.querySelectorAll('.tabbar [data-view]').forEach((b) => (b.onclick = () => showView(b.dataset.view)));
 
 // ---------- コマンド実行後の処理 ----------
 function afterCommand(events) {
@@ -183,12 +213,20 @@ function startLesson(idx) {
   game.lesson = { idx, step: 0, state: {}, done: false, hintShown: {} };
   try { L.setup(api); } catch (e) { console.error(e); }
   out.innerHTML = '';
-  termHtml(`<div class="banner">${icon('book')} レッスン ${idx + 1}: ${esc(L.title)}</div>`);
-  termLine('ヒントが欲しいときは hint と入力するか、「ヒント」ボタンを押してね。', 'dim');
+  termHtml(`<div class="banner">${icon('book')} ${idx + 1}. ${esc(L.title)}</div>`);
   enterStep();
   setModeButtons();
+  showView('play');
   renderAll();
-  input.focus();
+  if (save.welcomed) showIntro();
+}
+
+function showIntro() {
+  const L = LESSONS[game.lesson.idx];
+  openModal(`${icon('book')} ${game.lesson.idx + 1}. ${esc(L.title)}`, `<div class="intro-body">${L.intro}</div>
+    <div class="sheet-actions"><button class="btn primary" id="btn-start">はじめる</button></div>`, (box) => {
+    box.querySelector('#btn-start').onclick = closeModal;
+  });
 }
 
 function enterStep() {
@@ -237,58 +275,59 @@ function finishLesson() {
   save.completed[L.id] = true;
   const xp = first ? 60 : 15;
   gainXp(xp);
-  termHtml(`<div class="banner success">${icon('sparkles')} レッスンクリア！ ${esc(L.outro)}</div>`);
+  termHtml(`<div class="banner success">${icon('sparkles')} クリア！</div>`);
   confetti();
   showResult({
-    title: `${icon('sparkles')} レッスンクリア！`,
+    title: `${icon('sparkles')} クリア！`,
     body: `<p>${L.outro}</p><p class="xp-gain">+${xp} XP</p>`,
     actions: g.idx + 1 < LESSONS.length
-      ? [[`次のレッスンへ ${icon('play')}`, () => startLesson(g.idx + 1), 'primary'], ['このまま触ってみる', null]]
-      : [[`${icon('gamepad')} チャレンジモードへ`, () => startChallenge(), 'primary'], ['このまま触ってみる', null]],
+      ? [['閉じる', null], [`次へ ${icon('play')}`, () => startLesson(g.idx + 1), 'primary']]
+      : [['閉じる', null], [`${icon('gamepad')} チャレンジへ`, () => startChallenge(), 'primary']],
   });
 }
 
 function renderLessonPanel() {
   const g = game.lesson;
   const L = LESSONS[g.idx];
-  const steps = L.steps.map((s, i) => {
-    const cls = i < g.step ? 'done' : i === g.step ? 'current' : 'todo';
-    const hint = i === g.step && g.hintShown[i] ? `<button class="hint-cmd" data-cmd="${esc(s.hint)}" title="クリックで入力欄に貼り付け"><code>${esc(s.hint)}</code></button>` : '';
-    return `<li class="${cls}"><span class="mark">${i < g.step ? icon('check') : i + 1}</span><div>${s.text}${hint}</div></li>`;
-  }).join('');
+  const st = L.steps[g.step];
+  const pct = Math.round((g.step / L.steps.length) * 100);
+  const now = g.done
+    ? `<p class="step-now done">${icon('check-circle')} クリア！</p>`
+    : `<p class="step-now">${st.text}</p>${g.hintShown[g.step] ? `<button class="hint-cmd" data-cmd="${esc(st.hint)}">${icon('pencil')}<span>${esc(st.hint)}</span></button>` : ''}`;
   $('#mission').innerHTML = `
     <div class="m-head">
-      <span class="badge">レッスン ${g.idx + 1}/${LESSONS.length}</span>
+      <span class="badge">${g.idx + 1}/${LESSONS.length}</span>
       <h2>${esc(L.title)}</h2>
-      <button class="btn small" id="btn-lessons">${icon('list')} 一覧</button>
+      <span class="muted">${Math.min(g.step + 1, L.steps.length)}/${L.steps.length}</span>
     </div>
-    <details class="intro" ${g.step === 0 ? 'open' : ''}><summary>解説を読む</summary>${L.intro}</details>
-    <ol class="steps">${steps}</ol>
+    <div class="progress-bar"><i style="width:${g.done ? 100 : pct}%"></i></div>
+    ${now}
     <div class="m-actions">
-      ${g.done ? `<button class="btn primary" id="btn-next-lesson">${g.idx + 1 < LESSONS.length ? `次のレッスンへ ${icon('play')}` : `${icon('gamepad')} チャレンジへ`}</button>` : `<button class="btn" id="btn-hint">${icon('bulb')} ヒント</button>`}
-      <button class="btn ghost" id="btn-restart">${icon('restart')} やり直す</button>
+      ${g.done
+        ? `<button class="btn primary" id="btn-next-lesson">${g.idx + 1 < LESSONS.length ? `次へ ${icon('play')}` : `${icon('gamepad')} チャレンジへ`}</button>`
+        : `<button class="btn" id="btn-hint">${icon('bulb')} ヒント</button>`}
+      <button class="btn icon" id="btn-intro" title="解説" aria-label="解説">${icon('info')}</button>
+      <button class="btn icon" id="btn-lessons" title="レッスン一覧" aria-label="レッスン一覧">${icon('list')}</button>
+      <button class="btn icon" id="btn-restart" title="やり直す" aria-label="やり直す">${icon('restart')}</button>
     </div>`;
   $('#btn-lessons').onclick = openLessons;
+  $('#btn-intro').onclick = showIntro;
   $('#btn-restart').onclick = () => startLesson(g.idx);
   if ($('#btn-hint')) $('#btn-hint').onclick = showHint;
   if ($('#btn-next-lesson')) $('#btn-next-lesson').onclick = () => (g.idx + 1 < LESSONS.length ? startLesson(g.idx + 1) : startChallenge());
-  $('#mission').querySelectorAll('.hint-cmd').forEach((b) => (b.onclick = () => insertCommand(b.dataset.cmd.includes('<') ? b.dataset.cmd.replace(/<[^>]*>/g, '') : b.dataset.cmd)));
-  const cur = $('#mission .steps li.current');
-  if (cur) cur.scrollIntoView({ block: 'nearest' });
+  $('#mission').querySelectorAll('.hint-cmd').forEach((b) => (b.onclick = () => {
+    const c = b.dataset.cmd;
+    insertCommand(/<[^>]*>/.test(c) && !c.startsWith('echo') ? c.replace(/<[^>]*>/g, '') : c);
+  }));
 }
 
 function openLessons() {
-  const byCh = {};
-  LESSONS.forEach((l, i) => (byCh[l.chapter] = byCh[l.chapter] || []).push([l, i]));
-  const chNames = { 1: 'ひとりで記録する', 2: 'ブランチとマージ', 3: 'GitHub とチーム開発', 4: '取り消しと退避', 5: '履歴を操る', 6: '実践テクニック' };
-  const html = Object.entries(byCh).map(([ch, ls]) => `
-    <h3>第${ch}章 ${chNames[ch] || ''}</h3>
-    <div class="lesson-grid">${ls.map(([l, i]) => `
-      <button class="lesson-card ${save.completed[l.id] ? 'cleared' : ''}" data-i="${i}">
-        <span class="num">${i + 1}</span><b>${esc(l.title)}</b><small>${esc(l.summary)}</small>
-        ${save.completed[l.id] ? `<span class="clear-mark">${icon('check')} クリア</span>` : ''}
-      </button>`).join('')}</div>`).join('');
-  openModal(`${icon('list')} レッスン一覧`, `<p class="muted">上から順番に進めるのがおすすめ。クリアするとXPがもらえます。</p>${html}`, (box) => {
+  const cur = game.mode === 'lesson' && game.lesson ? game.lesson.idx : -1;
+  const html = `<div class="lesson-grid">${LESSONS.map((l, i) => `
+    <button class="lesson-card ${save.completed[l.id] ? 'cleared' : ''} ${i === cur ? 'current' : ''}" data-i="${i}">
+      <span class="num">${save.completed[l.id] ? icon('check') : i + 1}</span><b>${esc(l.title)}</b>
+    </button>`).join('')}</div>`;
+  openModal(`${icon('list')} レッスン`, html, (box) => {
     box.querySelectorAll('.lesson-card').forEach((b) => (b.onclick = () => { closeModal(); startLesson(Number(b.dataset.i)); }));
   });
 }
@@ -300,11 +339,11 @@ function startChallenge() {
   buildTeamRemote(game.world);
   game.ch = { n: 0, score: 0, hearts: 3, streak: 0, used: new Set(), mission: null, mem: {}, hints: 0, cmds: 0, state: 'playing', history: [] };
   out.innerHTML = '';
-  termHtml(`<div class="banner">${icon('gamepad')} チャレンジモード: チームから次々とミッションが届きます。ライフ ${icon('heart', 'heart')} が0になったら終了！</div>`);
-  termLine('ミッションの説明は左上のカード、ヒントは「ヒント」ボタンか hint コマンドで。', 'dim');
+  termHtml(`<div class="banner">${icon('gamepad')} チャレンジ: ライフ3つで挑戦！</div>`);
   setModeButtons();
+  showView('play');
   beginMission(FIRST_MISSION);
-  input.focus();
+  focusInput();
 }
 
 function beginMission(def) {
@@ -405,9 +444,8 @@ function gameOver() {
   const best = save.best;
   showResult({
     title: `${icon('flag')} ゲームオーバー`,
-    body: `<p class="big-score">${c.score} 点</p><p>クリアしたミッション: ${c.history.length ? c.n - 1 : 0}${c.score >= best ? `<br>${icon('trophy')} ハイスコア更新！` : `<br>ハイスコア: ${best} 点`}</p>
-      <p class="muted">失敗したコマンドの意味は「コマンド辞典」やレッスンで復習しよう。</p>`,
-    actions: [[`${icon('restart')} もう一度挑戦`, () => startChallenge(), 'primary'], [`${icon('book')} レッスンで復習`, () => openLessons()]],
+    body: `<p class="big-score">${c.score}</p><p>${c.score >= best ? `${icon('trophy')} ハイスコア！` : `ベスト ${best}`}</p>`,
+    actions: [[`${icon('book')} 復習`, () => openLessons()], [`${icon('restart')} もう一度`, () => startChallenge(), 'primary']],
   });
 }
 
@@ -430,18 +468,23 @@ function renderChallengePanel() {
   const story = c.mem.story || m.story;
   const hints = (typeof m.hints === 'function' ? m.hints(c.mem) : m.hints) || [];
   const shown = hints.slice(0, c.hints).map((h) => `<li>${esc(h)}</li>`).join('');
+  const hp = Math.max(0, c.hearts);
   let actions;
-  if (c.state === 'over') actions = `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度挑戦</button>`;
-  else if (c.result) actions = `<button class="btn primary" id="btn-next">次のミッションへ ${icon('play')}</button>`;
-  else actions = `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')} ヒント (${c.hints}/${hints.length})</button><button class="btn ghost" id="btn-skip">スキップ (ライフ -1)</button>`;
-  const status = c.result === 'success' ? `<div class="m-result ok">${icon('check-circle')} 成功！</div>` : c.result === 'fail' ? `<div class="m-result ng">${icon('x-circle')} 失敗: ${esc(c.failReason)}</div>` : '';
+  if (c.state === 'over') actions = `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度</button>`;
+  else if (c.result) actions = `<button class="btn primary" id="btn-next">次へ ${icon('play')}</button>`;
+  else actions = `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')} ヒント ${c.hints}/${hints.length}</button><button class="btn ghost" id="btn-skip">スキップ</button>`;
+  const status = c.result === 'success' ? `<div class="m-result ok">${icon('check-circle')} 成功！</div>` : c.result === 'fail' ? `<div class="m-result ng">${icon('x-circle')} ${esc(c.failReason)}</div>` : '';
   $('#mission').innerHTML = `
     <div class="m-head">
-      <span class="badge challenge">ミッション ${c.n}</span>
+      <span class="badge challenge">#${c.n}</span>
       <h2>${esc(m.title)}</h2>
-      <span class="pts">${m.points}pt</span>
+      <span class="stats-inline">
+        <span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span>
+        ${c.streak > 1 ? `<span class="streak">${icon('flame')}${c.streak}</span>` : ''}
+        <span>${c.score}</span>
+      </span>
     </div>
-    <div class="story"><div class="avatar">${avatar(m.who, 40)}</div><div class="bubble"><b>${esc(m.who)}</b><p>${story}</p>${m.detail ? `<p class="detail">${m.detail}</p>` : ''}</div></div>
+    <div class="story"><div class="avatar">${avatar(m.who, 36)}</div><div><p>${story}</p>${m.detail ? `<p class="detail muted">${m.detail}</p>` : ''}</div></div>
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
     ${status}
     <div class="m-actions">${actions}</div>`;
@@ -457,23 +500,23 @@ function startFree() {
   resetWorld();
   buildTeamRemote(game.world);
   out.innerHTML = '';
-  termHtml(`<div class="banner">${icon('flask')} フリーモード: 自由にコマンドを試せる砂場です。</div>`);
-  termLine(`チームのリポジトリ: git clone ${TEAM_URL}    自分のプロジェクト: mkdir my-app && cd my-app && git init`, 'dim');
+  termHtml(`<div class="banner">${icon('flask')} フリー: 何でも試そう</div>`);
+  termLine(`git clone ${TEAM_URL}`, 'dim');
   setModeButtons();
+  showView('play');
   renderAll();
-  input.focus();
+  focusInput();
 }
 
 function renderFreePanel() {
   $('#mission').innerHTML = `
-    <div class="m-head"><span class="badge free">フリー</span><h2>砂場モード</h2></div>
-    <p class="muted">何をしてもOK！仲間の動きを起こしてチーム開発を体験しよう。</p>
+    <div class="m-head"><span class="badge free">フリー</span><h2>仲間を動かす</h2>
+      <button class="btn icon" data-act="reset" title="最初から" aria-label="最初から">${icon('restart')}</button></div>
     <div class="free-actions">
-      <button class="btn" data-act="push">${icon('users')} 仲間が main に push</button>
-      <button class="btn" data-act="conflict">${icon('zap')} 仲間が README を変更 (競合の種)</button>
-      <button class="btn" data-act="branch">${icon('branch')} 仲間がブランチを push</button>
-      <button class="btn" data-act="pr">${icon('pr')} 仲間が PR を作成</button>
-      <button class="btn ghost" data-act="reset">${icon('restart')} 最初から</button>
+      <button class="btn" data-act="push">${icon('users')} main に push</button>
+      <button class="btn" data-act="conflict">${icon('zap')} README を変更</button>
+      <button class="btn" data-act="branch">${icon('branch')} ブランチを push</button>
+      <button class="btn" data-act="pr">${icon('pr')} PR を作成</button>
     </div>`;
   $('#mission').querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => freeAction(b.dataset.act)));
 }
@@ -546,11 +589,19 @@ function addChat(who, text) {
   box.appendChild(div);
   while (box.children.length > 30) box.removeChild(box.firstChild);
   box.scrollTop = box.scrollHeight;
-  $('#chat-card').classList.add('has-msg');
+  markUpdated('chat');
 }
 
 // ---------- 描画 ----------
+let lastSig = { graph: '', files: '' };
 function renderAll() {
+  const w = game.world;
+  const repo = w.repo;
+  const gsig = repo ? JSON.stringify([repo.branches, repo.remoteRefs, repo.tags, repo.head]) : w.cwd;
+  const fsig = repo ? JSON.stringify([w.dir.files, repo.index]) : JSON.stringify(w.dir.files);
+  if (lastSig.graph && gsig !== lastSig.graph) markUpdated('graph');
+  if (lastSig.files && fsig !== lastSig.files) markUpdated('files');
+  lastSig = { graph: gsig, files: fsig };
   renderPrompt();
   if (game.mode === 'lesson' && game.lesson) renderLessonPanel();
   else if (game.mode === 'challenge' && game.ch) renderChallengePanel();
@@ -662,17 +713,8 @@ function viewFile(area, f) {
 function renderStats() {
   const L = levelInfo(save.xp);
   $('#lv').textContent = L.lv;
-  $('#lv-title').textContent = L.title;
   $('#xpfill').style.width = `${(L.rest / L.need) * 100}%`;
-  $('#xp-text').textContent = `${L.rest}/${L.need}`;
-  const st = $('#game-stats');
-  if (game.mode === 'challenge' && game.ch) {
-    const c = game.ch;
-    st.innerHTML = `<span class="hearts" title="ライフ">${icon('heart').repeat(Math.max(0, c.hearts))}<span class="lost">${icon('heart').repeat(3 - Math.max(0, c.hearts))}</span></span><span class="score">${c.score}<small>点</small></span>${c.streak > 1 ? `<span class="streak">${icon('flame')}${c.streak}</span>` : ''}<span class="best">BEST ${save.best}</span>`;
-  } else if (game.mode === 'lesson') {
-    const n = Object.keys(save.completed).filter((k) => LESSONS.some((l) => l.id === k)).length;
-    st.innerHTML = `<span class="progress">${icon('book')} ${n}/${LESSONS.length} クリア</span>`;
-  } else st.innerHTML = '';
+  $('.level').title = `${L.title} ${L.rest}/${L.need} XP`;
 }
 
 function gainXp(n) {
@@ -680,8 +722,7 @@ function gainXp(n) {
   save.xp += n;
   persist();
   const after = levelInfo(save.xp);
-  if (after.lv > before) toast(`${icon('arrow-up')} レベルアップ！ Lv${after.lv} 「${after.title}」`);
-  else toast(`+${n} XP`);
+  if (after.lv > before) toast(`${icon('arrow-up')} Lv${after.lv} ${after.title}`);
 }
 
 // ---------- エディタ ----------
@@ -733,7 +774,7 @@ function saveEditor() {
 function closeEditor() {
   $('#editor').classList.remove('open');
   editing = null;
-  input.focus();
+  focusInput();
 }
 $('#editor-save').onclick = saveEditor;
 $('#editor-cancel').onclick = closeEditor;
@@ -745,40 +786,41 @@ function openModal(title, html, onReady) {
   $('#modal').classList.add('open');
   if (onReady) onReady($('#modal-body'));
 }
-function closeModal() { $('#modal').classList.remove('open'); input.focus(); }
+function closeModal() { $('#modal').classList.remove('open'); focusInput(); }
+function focusInput() { if (!isMobile()) input.focus(); }
 $('#modal-close').onclick = closeModal;
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#modal').classList.contains('open')) closeModal(); });
 
 function showResult({ title, body, actions }) {
-  openModal(title, `<div class="result">${body}<div class="result-actions">${actions.map(([t, , cls], i) => `<button class="btn ${cls || ''}" data-i="${i}">${t}</button>`).join('')}</div></div>`, (box) => {
+  openModal(title, `<div class="result">${body}<div class="sheet-actions">${actions.map(([t, , cls], i) => `<button class="btn ${cls || ''}" data-i="${i}">${t}</button>`).join('')}</div></div>`, (box) => {
     box.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => { closeModal(); const fn = actions[Number(b.dataset.i)][1]; if (fn) fn(); }));
   });
 }
 
 function openDocs() {
   const concepts = CONCEPTS.map(([k, v]) => `<div class="concept"><b>${esc(k)}</b><p>${esc(v)}</p></div>`).join('');
-  const cmds = COMMANDS.map((g) => `<h3>${esc(g.cat)}</h3><table class="cmd-table">${g.items.map(([c, d, ex]) => `<tr><td><code>${esc(c)}</code></td><td>${esc(d)}<br><button class="try" data-cmd="${esc(ex)}">${icon('play')} ${esc(ex)}</button></td></tr>`).join('')}</table>`).join('');
+  const cmds = COMMANDS.map((g) => `<h3>${esc(g.cat)}</h3><div class="cmd-list">${g.items.map(([c, d, ex]) => `<button class="cmd-item" data-cmd="${esc(ex)}"><code>${esc(c)}</code><span>${esc(d)}</span></button>`).join('')}</div>`).join('');
   const refs = REF_SYNTAX.map(([k, v]) => `<tr><td><code>${esc(k)}</code></td><td>${esc(v)}</td></tr>`).join('');
-  openModal(`${icon('book-open')} コマンド辞典`, `
-    <div class="docs-tabs"><button class="active" data-t="concepts">用語</button><button data-t="cmds">コマンド</button><button data-t="refs">コミットの指定</button></div>
-    <div class="docs-pane" data-p="concepts"><div class="concepts">${concepts}</div>${flowSvg()}</div>
-    <div class="docs-pane hidden" data-p="cmds"><p class="muted">${icon('play')} を押すと入力欄に貼り付けます。</p>${cmds}</div>
-    <div class="docs-pane hidden" data-p="refs"><table class="cmd-table">${refs}</table></div>`, (box) => {
+  openModal(`${icon('book-open')} 辞典`, `
+    <div class="docs-tabs"><button class="active" data-t="cmds">コマンド</button><button data-t="concepts">用語</button><button data-t="refs">指定方法</button></div>
+    <div class="docs-pane" data-p="cmds"><p class="muted">タップで入力欄へ</p>${cmds}</div>
+    <div class="docs-pane hidden" data-p="concepts">${flowSvg()}<div class="concepts">${concepts}</div></div>
+    <div class="docs-pane hidden" data-p="refs"><table class="ref-table">${refs}</table></div>`, (box) => {
     box.querySelectorAll('.docs-tabs button').forEach((b) => (b.onclick = () => {
       box.querySelectorAll('.docs-tabs button').forEach((x) => x.classList.toggle('active', x === b));
       box.querySelectorAll('.docs-pane').forEach((p) => p.classList.toggle('hidden', p.dataset.p !== b.dataset.t));
     }));
-    box.querySelectorAll('.try').forEach((b) => (b.onclick = () => { closeModal(); insertCommand(b.dataset.cmd); }));
+    box.querySelectorAll('.cmd-item').forEach((b) => (b.onclick = () => { closeModal(); insertCommand(b.dataset.cmd); }));
   });
 }
 
 function flowSvg() {
   return `<div class="flow">
-    <div class="flow-box">${icon('folder', 'big')}<b>作業ディレクトリ</b></div><div class="flow-arrow">git add →<br><small>← git restore --staged</small></div>
-    <div class="flow-box">${icon('clipboard', 'big')}<b>ステージ</b></div><div class="flow-arrow">git commit →</div>
-    <div class="flow-box">${icon('box', 'big')}<b>ローカル<br>リポジトリ</b></div><div class="flow-arrow">git push →<br><small>← git fetch / pull</small></div>
-    <div class="flow-box remote">${icon('cloud', 'big')}<b>リモート<br>(GitHub)</b></div></div>`;
+    <span>${icon('folder')} 作業中</span><code>add</code>
+    <span>${icon('clipboard')} ステージ</span><code>commit</code>
+    <span>${icon('box')} ローカル</span><code>push</code>
+    <span>${icon('cloud')} GitHub</span></div>`;
 }
 
 // ---------- 演出 ----------
@@ -847,15 +889,14 @@ startLesson(firstUncleared());
 if (!save.welcomed) {
   save.welcomed = true;
   persist();
-  openModal(`${icon('logo')} HOW to Git へようこそ！`, `
-    <div class="welcome">
-      <p>このアプリは、<b>Git の使い方をゲーム感覚で学べる</b>シミュレーターです。本物の Git と同じようなコマンドを、ブラウザの中の疑似ターミナルで打ってみましょう。</p>
-      <div class="modes-intro">
-        <div><b>${icon('book')} レッスン</b><p>基本から順番に。ステップごとに解説付き。</p></div>
-        <div><b>${icon('gamepad')} チャレンジ</b><p>チームからランダムにミッションが届く！競合や force push に注意。</p></div>
-        <div><b>${icon('flask')} フリー</b><p>何でも試せる砂場。仲間の push も起こせます。</p></div>
-      </div>
-      <p>右側には <b>コミットグラフ</b> と <b>ファイルの状態</b> がリアルタイムに表示されます。コマンドを打つたびにどう変化するか見てみよう！</p>
-      <p class="muted">※ 実際のファイルやGitHubには一切影響しません。安心して失敗してください。</p>
-    </div>`);
+  openModal(`${icon('logo')} HOW to Git`, `
+    <p class="intro-body">Git をゲームで学ぼう。</p>
+    <div class="modes-intro">
+      <div><b>${icon('book')} レッスン</b><span>基本を順番に</span></div>
+      <div><b>${icon('gamepad')} チャレンジ</b><span>ミッションに挑戦</span></div>
+      <div><b>${icon('flask')} フリー</b><span>自由に試す</span></div>
+    </div>
+    <div class="sheet-actions"><button class="btn primary" id="btn-welcome">はじめる</button></div>`, (box) => {
+    box.querySelector('#btn-welcome').onclick = () => { closeModal(); showIntro(); };
+  });
 }

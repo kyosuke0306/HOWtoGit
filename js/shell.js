@@ -227,7 +227,7 @@ export class Shell {
       case 'help': return this.help(ctx);
       default:
         ctx.out(`bash: ${cmd}: command not found`, 'err');
-        if (/^(add|commit|push|pull|merge|status|log|branch|checkout|switch|init|clone)$/.test(cmd)) ctx.hint(`git ${cmd} のように先頭に git を付けましょう。`);
+        if (/^(add|commit|push|pull|merge|status|log|branch|checkout|switch|init|clone)$/.test(cmd)) ctx.hint(`git ${cmd} と打とう`);
     }
   }
 
@@ -249,7 +249,7 @@ export class Shell {
     ];
     rows.forEach(([a, b]) => ctx.out([[a.padEnd(28), 'ok'], [b, '']]));
     ctx.out('');
-    ctx.hint('↑↓キーで履歴、Tabキーで補完できます。');
+    ctx.hint('↑↓で履歴、Tabで補完');
   }
 
   // ---- GitHub CLI (簡易) ----
@@ -276,7 +276,7 @@ export class Shell {
       w.createRemote(url, 'you');
       ctx.out(`✓ Created repository ${userSlug(w)}/${name} on GitHub`, 'ok');
       ctx.out(`  ${url}`, 'info');
-      ctx.hint(`リモートとして登録するには: git remote add origin ${url}`);
+      ctx.hint(`次は git remote add origin ${url}`);
       ctx.ev('gh-repo-create', { url });
       return;
     }
@@ -290,10 +290,10 @@ export class Shell {
     if (action === 'create') {
       const head = flags.head || currentBranch(repo);
       const base = flags.base || remote.defaultBranch;
-      if (head === base) { ctx.out(`could not create pull request: head branch "${head}" is the same as base branch`, 'err'); ctx.hint('PR は作業用ブランチから作ります。git switch -c feature/xxx でブランチを作りましょう。'); return; }
+      if (head === base) { ctx.out(`could not create pull request: head branch "${head}" is the same as base branch`, 'err'); ctx.hint('作業ブランチから作ろう'); return; }
       if (!remote.branches[head]) {
         ctx.out(`aborted: you must first push the current branch to a remote, or use the --head flag`, 'err');
-        ctx.hint(`先に git push -u origin ${head} でブランチを GitHub に送りましょう。`);
+        ctx.hint(`先に git push -u origin ${head}`);
         return;
       }
       if (repo.branches[head] && remote.branches[head] !== repo.branches[head] && w.isAncestor(remote.branches[head], repo.branches[head])) {
@@ -308,7 +308,7 @@ export class Shell {
       ctx.out(`${remote.url.replace(/\.git$/, '')}/pull/${number}`, 'info');
       const reviewer = remote.owner === 'team' ? '田中さん' : 'レビュアー';
       ctx.out(`[レビュー] ${reviewer}: 「レビューしました！LGTM マージしてOKです」`, 'ok');
-      ctx.hint(`gh pr merge ${number} でマージできます。`);
+      ctx.hint(`次は gh pr merge ${number}`);
       ctx.ev('pr-create', { number, head, base });
       return;
     }
@@ -338,7 +338,7 @@ export class Shell {
         if (r.reason === 'conflict') {
           ctx.out(`X Pull request #${pr.number} is not mergeable: the merge commit cannot be cleanly created.`, 'err');
           ctx.out(`  競合しているファイル: ${r.paths.join(', ')}`, 'err');
-          ctx.hint(`ローカルで ${pr.head} に ${pr.base} を取り込み (git merge origin/${pr.base})、競合を解決して push してから再度マージしましょう。`);
+          ctx.hint(`${pr.head} で git merge origin/${pr.base} → 解決 → push`);
           ctx.ev('pr-conflict', { number: pr.number });
         } else ctx.out('X Pull request could not be merged.', 'err');
         return;
@@ -349,7 +349,7 @@ export class Shell {
         delete remote.branches[pr.head];
         ctx.out(`✓ Deleted branch ${pr.head}`, 'ok');
       }
-      ctx.hint(`GitHub 上の ${pr.base} が更新されました。ローカルにも反映するには git switch ${pr.base} → git pull です。`);
+      ctx.hint(`ローカルも更新: git switch ${pr.base} → git pull`);
       ctx.ev('pr-merge', { number: pr.number, head: pr.head, base: pr.base });
       return;
     }

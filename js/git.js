@@ -263,7 +263,7 @@ function checkoutTree(world, dir, targetId, ctx, what = 'checkout') {
       ? 'Please commit your changes or stash them before you switch branches.'
       : 'Please commit your changes or stash them before you merge.', 'err');
     ctx.out('Aborting', 'err');
-    ctx.hint('コミットしていない変更があるので切り替えできません。git commit するか git stash で一時退避しましょう。');
+    ctx.hint('未コミットの変更あり → commit か git stash');
     return false;
   }
   if (untrackedBlocked.length) {
@@ -425,7 +425,7 @@ export function runGit(world, args, ctx) {
   }
   if (!dir) {
     ctx.out('fatal: not a git repository (or any of the parent directories): .git', 'err');
-    ctx.hint('ここはGitリポジトリではありません。git init でリポジトリを作るか、git clone で取得しましょう。');
+    ctx.hint('git init か git clone から始めよう');
     return;
   }
   const g = new GitCmd(world, dir, ctx);
@@ -451,7 +451,7 @@ function gitHelp(ctx) {
   ];
   groups.forEach(([t, c]) => ctx.out([[t.padEnd(14, '　'), 'info'], ['  ' + c, '']]));
   ctx.out('');
-  ctx.hint('詳しくは画面上部の「コマンド辞典」を見てね。');
+  ctx.hint('詳しくは「コマンド辞典」へ');
 }
 
 function gitInit(world, args, ctx) {
@@ -507,7 +507,7 @@ function gitClone(world, args, ctx) {
     ctx.out('warning: You appear to have cloned an empty repository.', 'warn');
   }
   world.dirs[path] = d;
-  ctx.hint(`'${name}' フォルダができました。cd ${name} で中に入りましょう。`);
+  ctx.hint(`次は cd ${name}`);
   ctx.ev('clone', { url, path });
 }
 
@@ -544,7 +544,7 @@ class GitCmd {
   needCommits() {
     if (!this.head) {
       this.ctx.out(`fatal: your current branch '${currentBranch(this.repo)}' does not have any commits yet`, 'err');
-      this.ctx.hint('まだコミットがありません。まずは git add と git commit をしましょう。');
+      this.ctx.hint('まだコミットがありません');
       return false;
     }
     return true;
@@ -554,7 +554,7 @@ class GitCmd {
     if (this.repo.conflicts.length) {
       this.ctx.out('error: you need to resolve your current index first', 'err');
       this.repo.conflicts.forEach((c) => this.ctx.out('\t' + c.path, 'err'));
-      this.ctx.hint('競合を解決中です。ファイルを編集して git add → git commit (または --abort で中止) しましょう。');
+      this.ctx.hint('競合を直して git add → git commit');
       return true;
     }
     return false;
@@ -750,7 +750,7 @@ class GitCmd {
       ctx.out('hint: Fix them up in the work tree, and then use \'git add/rm <file>\'', 'err');
       ctx.out('hint: as appropriate to mark resolution and make a commit.', 'err');
       ctx.out('fatal: Exiting because of an unresolved conflict.', 'err');
-      ctx.hint('競合しているファイルを編集してマーカーを消し、git add してからコミットしましょう。');
+      ctx.hint('競合を直して git add してから');
       return;
     }
     if (flags.a || flags.all) {
@@ -771,7 +771,7 @@ class GitCmd {
       else if (amend && this.head) message = w.objects[this.head].message;
       else {
         ctx.out('error: コミットメッセージを -m で指定してください。', 'err');
-        ctx.hint('例: git commit -m "トップページを追加"   (このシミュレーターではエディタ起動を省略しています)');
+        ctx.hint('例: git commit -m "メッセージ"');
         return;
       }
     }
@@ -801,7 +801,7 @@ class GitCmd {
           s.untracked.forEach((x) => ctx.out('\t' + x.path, 'err'));
         }
         ctx.out('no changes added to commit (use "git add" and/or "git commit -a")');
-        ctx.hint('コミットする前に git add でステージングエリアに追加しましょう。');
+        ctx.hint('先に git add しよう');
       } else ctx.out('nothing to commit, working tree clean');
       return;
     }
@@ -873,7 +873,7 @@ class GitCmd {
         ctx.out(seg);
       } else printCommitHeader(w, repo, ctx, id);
     }
-    if (flags.graph) ctx.hint('ブランチの形は右側の「コミットグラフ」で確認できます。');
+    
     ctx.ev('log');
   }
 
@@ -903,7 +903,7 @@ class GitCmd {
     repo.reflog.forEach((e, i) => {
       this.ctx.out([[short(e.id), 'hash'], [` HEAD@{${i}}: ${e.msg}`, '']]);
     });
-    this.ctx.hint('HEAD の移動履歴です。git reset --hard HEAD@{1} のようにして過去の状態に戻せます。');
+    this.ctx.hint('戻すなら git reset --hard HEAD@{1}');
     this.ctx.ev('reflog');
   }
 
@@ -924,7 +924,7 @@ class GitCmd {
         if (repo.branches[name] === undefined) { ctx.out(`error: branch '${name}' not found.`, 'err'); continue; }
         if (name === cur) {
           ctx.out(`error: Cannot delete branch '${name}' checked out at '${w.cwd}'`, 'err');
-          ctx.hint('今いるブランチは削除できません。git switch main などで別のブランチに移動してから削除しましょう。');
+          ctx.hint('別のブランチに移動してから削除');
           continue;
         }
         const id = repo.branches[name];
@@ -969,7 +969,7 @@ class GitCmd {
       const start = pos[1] ? this.resolve(pos[1]) : this.head;
       if (!start) {
         if (!pos[1]) ctx.out(`fatal: not a valid object name: '${cur}'`, 'err');
-        if (!pos[1]) ctx.hint('ブランチを作るには、最低1つコミットが必要です。');
+        if (!pos[1]) ctx.hint('先にコミットが必要です');
         return;
       }
       repo.branches[name] = start;
@@ -978,7 +978,7 @@ class GitCmd {
         ctx.out(`branch '${name}' set up to track '${pos[1]}'.`);
       }
       ctx.ev('branch-create', { name });
-      ctx.hint(`ブランチ ${name} を作りました。移動するには git switch ${name} です。`);
+      ctx.hint(`移動は git switch ${name}`);
       return;
     }
     // 一覧
@@ -1108,7 +1108,7 @@ class GitCmd {
     ctx.out('state without impacting any branches by switching back to a branch.', 'warn');
     ctx.out('');
     ctx.out(`HEAD is now at ${short(id)} ${firstLine(this.w.objects[id].message)}`);
-    ctx.hint('HEAD がブランチから離れた状態(detached HEAD)です。戻るには git switch main など。');
+    ctx.hint('戻るには git switch main');
     ctx.ev('checkout', { detached: true, id });
     return true;
   }
@@ -1134,7 +1134,7 @@ class GitCmd {
         ctx.out('hint: If you want to detach HEAD at the commit, try again with the --detach option.', 'err');
       } else {
         ctx.out(`fatal: invalid reference: ${pos[0]}`, 'err');
-        ctx.hint(`ブランチ ${pos[0]} はありません。作りながら移動するなら git switch -c ${pos[0]} です。`);
+        ctx.hint(`作るなら git switch -c ${pos[0]}`);
       }
     }
   }
@@ -1301,7 +1301,7 @@ class GitCmd {
     const any = printTreeDiff(ctx, a, b, files);
     if (!any && !staged && !refs.length) {
       const s = computeStatus(w, this.dir);
-      if (s.staged.length) ctx.hint('ステージ済みの変更は git diff --staged で見られます。');
+      if (s.staged.length) ctx.hint('ステージ済みは git diff --staged');
     }
     ctx.ev('diff', { staged: !!staged });
   }
@@ -1355,7 +1355,7 @@ class GitCmd {
       this.printStat(w.tree(ours), w.tree(theirs));
       repo.origHead = ours;
       setHeadTo(repo, theirs, `merge ${label}: Fast-forward`);
-      ctx.hint('早送り(Fast-forward)マージ: ブランチの指す位置を前に進めただけなので、マージコミットは作られません。');
+      ctx.hint('Fast-forward: ブランチを前に進めただけ');
       ctx.ev('merge', { kind: 'ff', theirs, via, branch: currentBranch(repo) });
       return 'ff';
     }
@@ -1375,7 +1375,7 @@ class GitCmd {
       dirty.forEach((p) => ctx.out('\t' + p, 'err'));
       ctx.out('Please commit your changes or stash them before you merge.', 'err');
       ctx.out('Aborting', 'err');
-      ctx.hint('コミットしていない変更があります。先に commit するか git stash で退避しましょう。');
+      ctx.hint('未コミットの変更あり → commit か git stash');
       return 'blocked';
     }
     const blockedUntracked = s.untracked.map((x) => x.path).filter((p) => res.work[p] !== undefined && res.work[p] !== this.dir.files[p]);
@@ -1395,7 +1395,7 @@ class GitCmd {
         repo.conflicts = res.conflicts;
         res.conflicts.forEach((c) => ctx.out(`CONFLICT (content): Merge conflict in ${c.path}`, 'err'));
       }
-      ctx.hint('--squash: 変更をまとめてステージしました。git commit -m "..." で1つのコミットにしましょう。');
+      ctx.hint('続けて git commit -m "..."');
       ctx.ev('merge', { kind: 'squash', theirs, via });
       return 'squash';
     }
@@ -1409,7 +1409,7 @@ class GitCmd {
         } else ctx.out(`CONFLICT (modify/delete): ${c.path} ${c.kind}.`, 'err');
       }
       ctx.out('Automatic merge failed; fix conflicts and then commit the result.', 'err');
-      ctx.hint('競合が発生！ファイルを開いて (例: edit ' + res.conflicts[0].path + ') <<<<<<< と >>>>>>> の間を直し、git add → git commit で完了です。やめるなら git merge --abort。');
+      ctx.hint('競合！ edit ' + res.conflicts[0].path + ' で直して git add → git commit');
       ctx.ev('conflict', { kind: 'merge', paths: res.conflicts.map((c) => c.path), via });
       ctx.ev('merge', { kind: 'conflict', theirs, via });
       return 'conflict';
@@ -1418,7 +1418,7 @@ class GitCmd {
     setHeadTo(repo, id, `merge ${label}: Merge made by the 'ort' strategy.`);
     ctx.out("Merge made by the 'ort' strategy.", 'ok');
     this.printStat(w.tree(ours), repo.index);
-    ctx.hint('3-wayマージ: 2つの親を持つ「マージコミット」が作られました。');
+    ctx.hint('マージコミットができました');
     ctx.ev('merge', { kind: 'merge', theirs, id, via, branch: currentBranch(repo) });
     ctx.ev('commit', { id, branch: currentBranch(repo), merge: true });
     return 'merge';
@@ -1527,7 +1527,7 @@ class GitCmd {
       if (!cid) return;
       if (this.w.objects[cid].parents.length > 1 && !flags.m) {
         ctx.out(`error: commit ${short(cid)} is a merge but no -m option was given.`, 'err');
-        ctx.hint('マージコミットを打ち消すには git revert -m 1 <コミット> のように親を指定します。');
+        ctx.hint('git revert -m 1 <ID> を使おう');
         return;
       }
       const r = this.applyCommit(cid, 'revert');
@@ -1543,7 +1543,7 @@ class GitCmd {
       if (r.empty) { ctx.out('nothing to commit (変更はすでに打ち消されています)', 'warn'); continue; }
       setHeadTo(repo, r.id, `revert: ${firstLine(r.message)}`);
       this.printCommitSummary(r.id, r.message);
-      ctx.hint('revert: 過去のコミットを打ち消す「新しいコミット」を作りました。履歴は消えないので共有ブランチでも安全です。');
+      ctx.hint('打ち消しコミットを作りました');
       ctx.ev('revert', { id: r.id, commit: cid });
       ctx.ev('commit', { id: r.id, branch: currentBranch(repo) });
     }
@@ -1655,7 +1655,7 @@ class GitCmd {
     repo.op = null;
     reflog(repo, this.head, `rebase (finish): returning to refs/heads/${op.branch}`);
     ctx.out(`Successfully rebased and updated refs/heads/${op.branch}.`, 'ok');
-    ctx.hint('リベース: 自分のコミットを相手ブランチの先端に付け替えました。履歴が一直線になります（コミットIDは新しくなります）。');
+    ctx.hint('履歴が一直線になりました');
     ctx.ev('rebase', { done: true, onto: op.onto, branch: op.branch });
   }
 
@@ -1677,7 +1677,7 @@ class GitCmd {
       const includeUntracked = flags.u || flags['include-untracked'];
       if (!s.staged.length && !s.unstaged.length && !(includeUntracked && s.untracked.length)) {
         ctx.out('No local changes to save');
-        if (s.untracked.length) ctx.hint('新規ファイル(untracked)は通常 stash されません。含めるには git stash -u です。');
+        if (s.untracked.length) ctx.hint('新規ファイルも含めるなら git stash -u');
         return;
       }
       const work = {};
@@ -1690,7 +1690,7 @@ class GitCmd {
       if (includeUntracked) s.untracked.forEach((u) => delete this.dir.files[u.path]);
       hardReset(w, this.dir, this.head);
       ctx.out(`Saved working directory and index state ${msg}`, 'ok');
-      ctx.hint('変更を一時退避しました。git stash pop で戻せます。');
+      ctx.hint('戻すときは git stash pop');
       ctx.ev('stash', { action: 'push' });
       return;
     }
@@ -1788,7 +1788,7 @@ class GitCmd {
     repo.tags[name] = id;
     if (flags.a || flags.m) w.annotated[name] = { tagger: w.user.name, message: flags.m ? flags.m.join('\n') : name };
     ctx.ev('tag', { name, id });
-    ctx.hint(`タグ ${name} を付けました。リモートに送るには git push origin ${name} です。`);
+    ctx.hint(`送るなら git push origin ${name}`);
   }
 
   // ---- remote ----
@@ -1800,7 +1800,7 @@ class GitCmd {
         if (sub) { ctx.out(`${n}\t${url} (fetch)`); ctx.out(`${n}\t${url} (push)`); }
         else ctx.out(n);
       }
-      if (!Object.keys(repo.remotes).length && sub) ctx.hint('リモートが登録されていません。git remote add origin <URL> で登録します。');
+      if (!Object.keys(repo.remotes).length && sub) ctx.hint('登録: git remote add origin <URL>');
       return;
     }
     if (sub === 'add') {
@@ -1854,7 +1854,7 @@ class GitCmd {
     if (!url) {
       this.ctx.out(`fatal: '${name}' does not appear to be a git repository`, 'err');
       this.ctx.out('fatal: Could not read from remote repository.', 'err');
-      if (!Object.keys(this.repo.remotes).length) this.ctx.hint('リモートが未登録です。git remote add origin <URL> で登録しましょう。');
+      if (!Object.keys(this.repo.remotes).length) this.ctx.hint('登録: git remote add origin <URL>');
       return null;
     }
     return this.w.remotes[url];
@@ -1866,7 +1866,7 @@ class GitCmd {
     const names = flags.all ? Object.keys(this.repo.remotes) : [pos[0] || this.defaultRemote()];
     if (!names[0]) {
       this.ctx.out('fatal: No remote repository specified.', 'err');
-      this.ctx.hint('リモートが未登録です。git remote add origin <URL> で登録しましょう。');
+      this.ctx.hint('登録: git remote add origin <URL>');
       return false;
     }
     for (const n of names) if (this.doFetch(n, { prune: flags.prune || flags.p }) === false) return false;
@@ -1923,7 +1923,7 @@ class GitCmd {
       if (!b || !repo.upstream[b]) {
         if (!Object.keys(repo.remotes).length) {
           ctx.out('fatal: No remote repository specified.', 'err');
-          ctx.hint('リモートが未登録です。git remote add origin <URL> で登録しましょう。');
+          ctx.hint('登録: git remote add origin <URL>');
           return;
         }
         ctx.out('There is no tracking information for the current branch.', 'err');
@@ -1985,7 +1985,7 @@ class GitCmd {
         ctx.out('fatal: No configured push destination.', 'err');
         ctx.out('Either specify the URL from the command-line or configure a remote repository using', 'err');
         ctx.out('    git remote add <name> <url>', 'err');
-        ctx.hint('まずリモートを登録しましょう: git remote add origin <URL>');
+        ctx.hint('登録: git remote add origin <URL>');
         return;
       }
       if (b && repo.upstream[b]) {
@@ -1998,7 +1998,7 @@ class GitCmd {
         ctx.out('', 'err');
         ctx.out(`    git push --set-upstream origin ${b}`, 'err');
         ctx.out('', 'err');
-        ctx.hint(`初回は git push -u origin ${b} で「どこに送るか」を設定しましょう (-u は --set-upstream の短縮形)。`);
+        ctx.hint(`初回は git push -u origin ${b}`);
         return;
       } else remoteName = this.defaultRemote();
     }
@@ -2046,7 +2046,7 @@ class GitCmd {
       if (!local) {
         ctx.out(`error: src refspec ${src} does not match any`, 'err');
         ctx.out(`error: failed to push some refs to '${remote.url}'`, 'err');
-        if (!this.head) ctx.hint('まだコミットがないので push できません。先に commit しましょう。');
+        if (!this.head) ctx.hint('先に commit しよう');
         return;
       }
       const old = remote.branches[dst];
@@ -2090,7 +2090,7 @@ class GitCmd {
       ctx.out('hint: have locally. This is usually caused by another repository pushing to', 'err');
       ctx.out('hint: the same ref. If you want to integrate the remote changes, use', 'err');
       ctx.out("hint: 'git pull' before pushing again.", 'err');
-      ctx.hint('他の人が先に push しています！ git pull で最新を取り込んでから、もう一度 push しましょう。');
+      ctx.hint('先に push した人がいます → git pull してから push');
       ctx.ev('push-rejected', {});
     }
   }
