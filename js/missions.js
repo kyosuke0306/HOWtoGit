@@ -195,7 +195,7 @@ export const MISSIONS = [
       api.w.cwd = p;
       m.story = '本番の index.html に誤字「あいます」が！すぐ直して共有して。<br><b>やりかけの作業 (app.js) は消さないでね</b>';
     },
-    hints: () => ['作業中の変更は git stash で退避できます', 'git switch main → git pull で最新に', '「コード」ボタンか edit で index.html を直して commit → push', 'git switch feature/discount → git stash pop で作業を戻す'],
+    hints: () => ['作業中の変更は git stash で退避できます', 'git switch main → git pull で最新に', 'edit index.html で「あいます」を「あります」に直して commit → push', 'git switch feature/discount → git stash pop で作業を戻す'],
     check(api, evs, m) {
       const t = treeOfRemote(api, 'main');
       if (Object.values(t).some((v) => v.includes(m.wip))) return { fail: '作業中のコードを main に push してしまった！' };
