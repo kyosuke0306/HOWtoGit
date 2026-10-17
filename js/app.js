@@ -9,6 +9,7 @@ import { createApi, buildTeamRemote, TEAM_URL, FILES } from './scenario.js';
 import { COMMANDS, CONCEPTS, REF_SYNTAX, FIRST_TIME } from './docs.js';
 import { icon, avatar, injectSprite } from './icons.js';
 import { createKeyboard } from './keyboard.js';
+import { ask, loadSettings, saveSettings, formatAnswer, DEFAULT_MODEL } from './ask.js';
 import { GROUPS, DESC, baseFor, cmdOf, chipsFor, opChips } from './builder.js';
 
 injectSprite();
@@ -557,6 +558,87 @@ function zoomAt(z, cx, cy) {
   }, { passive: false });
 }
 $('#btn-zoom').onclick = () => setZoom(1);
+
+// ---------- 質問 (Gemini) ----------
+const chat = []; // {role, text}
+let asking = false;
+// いまの画面の状況を短い文章にする
+function askContext() {
+  const w = game.world;
+  const L = [];
+  const mode = { stage: 'ステージ', challenge: 'チャレンジ', free: 'フリー' }[game.mode] || '';
+  if (game.mode === 'stage' && game.stage) L.push(`モード: ステージ ${game.stage.idx + 1}「${game.stage.def.title}」 目標: ${game.stage.def.goal}`);
+  else if (game.mode === 'challenge' && game.ch && game.ch.mission) {
+    const story = (game.ch.mem.story || game.ch.mission.story || '').replace(/<[^>]+>/g, '');
+    L.push(`モード: チャレンジ 依頼「${game.ch.mission.title}」: ${story}`);
+  } else L.push(`モード: ${mode}`);
+  if (w) {
+    L.push(`今いるフォルダ: ${w.cwd}`);
+    const repo = w.repo;
+    if (!repo) L.push('Git の管理外 (まだ clone / init していない)');
+    else {
+      const head = repo.head.type === 'branch' ? `ブランチ ${repo.head.name}` : `コミット ${String(repo.head.id).slice(0, 7)} (detached)`;
+      L.push(`HEAD: ${head}`);
+      const msg = (id) => (w.objects[id] ? w.objects[id].message.split('\n')[0] : '');
+      L.push('ブランチ: ' + Object.entries(repo.branches).map(([n, id]) => `${n}→${msg(id)}`).join(' / '));
+      const rr = Object.entries(repo.remoteRefs);
+      if (rr.length) L.push('リモート追跡: ' + rr.map(([n, id]) => `${n}→${msg(id)}`).join(' / '));
+      const st = computeStatus(w, w.dir);
+      if (repo.op) L.push(`作業途中: ${repo.op.type}${st.conflicts.length ? ` 競合: ${st.conflicts.map((c) => c.path).join(', ')}` : ''}`);
+      const ch = [...st.staged.map((x) => `ステージ済 ${x.path}`), ...st.unstaged.map((x) => `変更 ${x.path}`), ...st.untracked.map((x) => `未追跡 ${x.path}`)];
+      if (ch.length) L.push('変更: ' + ch.join(', '));
+    }
+  }
+  const log = out.innerText.split('\n').filter((l) => l.trim()).slice(-14).join('\n');
+  if (log) L.push('最近のターミナル:\n' + log);
+  return L.join('\n');
+}
+function renderChat() {
+  const box = $('#ask-msgs');
+  box.innerHTML = chat.length
+    ? chat.map((m) => `<div class="msg ${m.role}${m.err ? ' err' : ''}">${m.role === 'model' ? formatAnswer(m.text, esc) : esc(m.text)}</div>`).join('') + (asking ? '<div class="msg model typing"><i></i><i></i><i></i></div>' : '')
+    : '<div class="ask-empty">コマンドの意味や、いまの状況で次に何をすべきかを聞けます</div>';
+  box.scrollTop = box.scrollHeight;
+}
+function openAsk() {
+  const s = loadSettings();
+  $('#ask-setup').classList.toggle('hidden', !!s.key);
+  $('#ask-key').value = s.key;
+  $('#ask-model').value = s.model || DEFAULT_MODEL;
+  renderChat();
+  openSheet('ask-sheet');
+  if (s.key && !isTouch()) $('#ask-input').focus();
+}
+$('#btn-ask').onclick = () => { if (!ghost()) ($('#ask-sheet').classList.contains('open') ? closeSheet('ask-sheet') : openAsk()); };
+$('#ask-gear').onclick = () => $('#ask-setup').classList.toggle('hidden');
+$('#ask-setup').onsubmit = (e) => {
+  e.preventDefault();
+  saveSettings({ key: $('#ask-key').value.trim(), model: $('#ask-model').value.trim() || DEFAULT_MODEL });
+  $('#ask-setup').classList.toggle('hidden', !!loadSettings().key);
+  toast(`${icon('check')} 保存しました`);
+};
+$('#ask-key-clear').onclick = () => { saveSettings({ ...loadSettings(), key: '' }); $('#ask-key').value = ''; toast('キーを消しました'); };
+$('#ask-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const q = $('#ask-input').value.trim();
+  if (!q || asking) return;
+  if (!loadSettings().key) { $('#ask-setup').classList.remove('hidden'); return; }
+  $('#ask-input').value = '';
+  chat.push({ role: 'user', text: q });
+  asking = true;
+  renderChat();
+  try {
+    const history = chat.filter((m) => !m.err).slice(-10);
+    chat.push({ role: 'model', text: await ask(history, askContext()) });
+  } catch (err) {
+    chat.push({ role: 'model', text: err.message || String(err), err: true });
+  }
+  asking = false;
+  renderChat();
+};
+$('#ask-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('#ask-form').requestSubmit(); }
+});
 
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
 $('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
