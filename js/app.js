@@ -654,19 +654,14 @@ function checkChallenge(events) {
 
 function missionSuccess() {
   const c = game.ch;
-  const m = c.mission;
   c.result = 'success';
   c.streak++;
-  const hintRate = Math.max(0.4, 1 - c.hints * 0.15);
-  const streakRate = 1 + Math.min(0.5, (c.streak - 1) * 0.1);
-  const bonus = c.mem.bonus || 0;
-  const pts = Math.round(m.points * hintRate * streakRate) + bonus;
-  c.score += pts;
-  if (c.score > save.best) { save.best = c.score; persist(); }
-  termHtml(`<div class="banner success">${icon('check-circle')} 成功！ +${pts}</div>`);
+  c.score++; // 成功した依頼の数
+  if (c.score > (save.bestClear || 0)) { save.bestClear = c.score; persist(); }
+  termHtml(`<div class="banner success">${icon('check-circle')} 成功！</div>`);
   confetti();
   renderAll();
-  setTimeout(() => resultSheet(true, pts), 700);
+  setTimeout(() => resultSheet(true), 700);
 }
 
 function missionFail(reason) {
@@ -683,16 +678,16 @@ function missionFail(reason) {
   setTimeout(() => resultSheet(false), 600);
 }
 
-function resultSheet(ok, pts = 0) {
+function resultSheet(ok) {
   const c = game.ch;
   const m = c.mission;
   const over = c.state === 'over';
   showResult({
     title: ok ? `${icon('check-circle')} 成功！` : `${icon('x-circle')} 失敗`,
-    body: `${ok ? `<p class="big-score">+${pts}</p>` : `<p class="fail-reason">${esc(c.failReason)}</p>`}
+    body: `${ok ? '' : `<p class="fail-reason">${esc(c.failReason)}</p>`}
       <div class="lesson-box"><b>${icon('info')} 判断のポイント</b><p>${m.lesson || ''}</p></div>
       ${m.answer ? `<div class="answer-box"><b>模範解答</b><code>${esc(m.answer)}</code></div>` : ''}
-      ${over ? `<p class="big-score">${c.score}</p><p>${c.score >= save.best ? `${icon('trophy')} ハイスコア！` : `ベスト ${save.best}`}</p>` : ''}`,
+      ${over ? `<p class="big-score">${c.score}件 クリア</p><p>${c.score && c.score >= save.bestClear ? `${icon('trophy')} 自己ベスト！` : `ベスト ${save.bestClear || 0}件`}</p>` : ''}`,
     actions: over
       ? [[`${icon('home')} トップ`, () => go('#/')], [`${icon('restart')} もう一度`, () => startChallenge(), 'primary']]
       : [[`次の依頼 ${icon('play')}`, () => nextMission(), 'primary']],
@@ -719,12 +714,12 @@ function renderChallengeCard() {
   const hints = (typeof m.hints === 'function' ? m.hints(c.mem) : m.hints) || [];
   const shown = hints.slice(0, c.hints).map((h) => `<li>${esc(h)}</li>`).join('');
   const hp = Math.max(0, c.hearts);
-  setChip(`<span class="badge challenge">${c.n}</span><span class="chip-text">${esc(m.title)}</span><span class="stats-inline"><span class="hearts">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span><span class="score">${c.score}</span></span>`);
+  setChip(`<span class="badge challenge">${c.n}</span><span class="chip-text">${esc(m.title)}</span><span class="stats-inline"><span class="hearts">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span></span>`);
   $('#req').innerHTML = `
     <div class="req-head">
       <span class="badge challenge">依頼 ${c.n}</span>
       <h2>${esc(m.title)}</h2>
-      <span class="stats-inline"><span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span>${c.streak > 1 ? `<span class="streak">${icon('flame')}${c.streak}</span>` : ''}<span class="score">${c.score}</span></span>
+      <span class="stats-inline"><span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span></span>
     </div>
     <div class="story"><div class="avatar">${avatar(m.who, 34)}</div><div><p>${story}</p>${m.detail ? `<p class="detail muted">${m.detail}</p>` : ''}</div></div>
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
@@ -1023,8 +1018,8 @@ function renderHome() {
       </a>
       <a class="mode-card challenge" href="#/challenge">
         <span class="mode-icon">${icon('gamepad')}</span>
-        <span class="mode-body"><b>チャレンジ</b><small>${playing ? `続きから (${game.ch.score}点)` : '仲間の依頼を判断してさばく'}</small></span>
-        <span class="mode-meta">${save.best ? `${icon('trophy')}${save.best}` : ''}</span>
+        <span class="mode-body"><b>チャレンジ</b><small>${playing ? '続きから' : '仲間の依頼を判断してさばく'}</small></span>
+        <span class="mode-meta">${save.bestClear ? `${icon('trophy')}${save.bestClear}件` : ''}</span>
       </a>
       <a class="mode-card free" href="#/free">
         <span class="mode-icon">${icon('flask')}</span>
