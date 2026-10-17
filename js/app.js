@@ -712,7 +712,8 @@ function finishStage() {
   confetti();
   const next = g.idx + 1 < STAGES.length;
   setTimeout(() => showResult({
-    title: `${icon('sparkles')} クリア！`,
+    kind: 'clear',
+    title: 'クリア！',
     body: `<div class="stars">${starHtml(st)}</div>
       <p class="muted">${g.used} 手 (目標 ${g.def.par} 手)</p>
       <div class="lesson-box"><b>${icon('info')} ポイント</b><p>${esc(g.def.learn)}</p></div>
@@ -848,7 +849,8 @@ function resultSheet(ok) {
   const m = c.mission;
   const over = c.state === 'over';
   showResult({
-    title: ok ? `${icon('check-circle')} 成功！` : `${icon('x-circle')} 失敗`,
+    kind: ok ? 'success' : over ? 'over' : 'fail',
+    title: ok ? '成功！' : over ? 'ゲームオーバー' : '失敗…',
     body: `${ok ? '' : `<p class="fail-reason">${esc(c.failReason)}</p>`}
       <div class="lesson-box"><b>${icon('info')} 判断のポイント</b><p>${m.lesson || ''}</p></div>
       ${m.answer ? `<div class="answer-box"><b>模範解答</b><code>${esc(m.answer)}</code></div>` : ''}
@@ -865,10 +867,37 @@ function nextMission() {
   beginMission(pickNextMission());
 }
 
-function skipMission() {
+// ゲーム用の確認ダイアログ (ブラウザの confirm の代わり)
+// opts: { icon, title, text, yes, no, cost (失うハートの数), tone: 'danger' | 'warn' }
+function gameConfirm({ icon: ic = 'info', title, text = '', yes = 'OK', no = 'やめる', cost = 0, tone = '' }) {
+  return new Promise((resolve) => {
+    const box = $('#gdialog');
+    box.className = `gdialog open ${tone}`;
+    $('#gdialog-icon').innerHTML = icon(ic);
+    $('#gdialog-title').textContent = title;
+    $('#gdialog-text').textContent = text;
+    const hp = game.ch ? Math.max(0, game.ch.hearts) : 0;
+    $('#gdialog-cost').innerHTML = cost && game.mode === 'challenge'
+      ? `<span class="hearts">${icon('heart').repeat(Math.max(0, hp - cost))}<span class="breaking">${icon('heart').repeat(Math.min(cost, hp))}</span><span class="lost">${icon('heart').repeat(3 - hp)}</span></span><small>ライフ -${cost}</small>`
+      : '';
+    $('#gdialog-yes').textContent = yes;
+    $('#gdialog-no').textContent = no;
+    const done = (v) => {
+      box.classList.remove('open');
+      $('#gdialog-yes').onclick = $('#gdialog-no').onclick = box.onclick = null;
+      resolve(v);
+    };
+    $('#gdialog-yes').onclick = () => done(true);
+    $('#gdialog-no').onclick = () => done(false);
+    box.onclick = (e) => { if (e.target === box) done(false); };
+    setTimeout(() => $('#gdialog-yes').focus(), 50);
+  });
+}
+
+async function skipMission() {
   const c = game.ch;
   if (c.result) return nextMission();
-  if (!confirm('この依頼をあきらめますか？ (ライフ -1)')) return;
+  if (!(await gameConfirm({ icon: 'flag', title: 'この依頼をあきらめる？', yes: 'あきらめる', no: '続ける', cost: 1, tone: 'danger' }))) return;
   missionFail('あきらめた');
 }
 
@@ -899,16 +928,18 @@ function renderChallengeCard() {
   if ($('#btn-skip')) $('#btn-skip').onclick = skipMission;
   if ($('#btn-next')) $('#btn-next').onclick = nextMission;
   if ($('#btn-retry')) $('#btn-retry').onclick = startChallenge;
-  $('#btn-restart').onclick = () => { if (confirm('チーム開発を最初からやり直しますか？')) startChallenge(); };
+  $('#btn-restart').onclick = async () => {
+    if (await gameConfirm({ icon: 'restart', title: '最初からやり直す？', text: '1件目の依頼から始めます。', yes: 'やり直す', no: '続ける', tone: 'warn' })) startChallenge();
+  };
 }
 
 // ---------- HELP: 元に戻す手順を教える (自動では直さない) ----------
-function useHelp() {
+async function useHelp() {
   const c = game.ch;
   if (game.mode === 'challenge') {
     if (!c || c.state !== 'playing') return;
     if (c.hearts <= 1) { toast('ライフが残り1つなので HELP は使えません'); return; }
-    if (!confirm('HELP を使いますか？ (ライフ -1)\n元に戻す手順を教えます。')) return;
+    if (!(await gameConfirm({ icon: 'alert', title: 'HELP を使う？', text: '元に戻す手順を教えます。', yes: '使う', no: 'やめる', cost: 1, tone: 'warn' }))) return;
     c.hearts--;
     renderAll();
   }
@@ -1154,17 +1185,20 @@ $('#editor-cancel').onclick = closeEditor;
 function openModal(title, html, onReady) {
   $('#modal-title').innerHTML = title;
   $('#modal-body').innerHTML = html;
-  $('#modal').classList.add('open');
+  $('#modal').className = 'modal open';
   if (onReady) onReady($('#modal-body'));
 }
-function closeModal() { $('#modal').classList.remove('open'); }
+function closeModal() { $('#modal').className = 'modal'; }
 $('#modal-close').onclick = closeModal;
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && $('#modal').classList.contains('open')) closeModal(); });
-function showResult({ title, body, actions }) {
-  openModal(title, `<div class="result">${body}<div class="sheet-actions">${actions.map(([t, , cls], i) => `<button class="btn ${cls || ''}" data-i="${i}">${t}</button>`).join('')}</div></div>`, (box) => {
+// 結果のポップアップ (ゲーム風): kind = clear | success | fail | over
+function showResult({ kind, title, body, actions }) {
+  const ic = { clear: 'trophy', success: 'check-circle', fail: 'x-circle', over: 'heart' }[kind] || 'info';
+  openModal(title, `<div class="res-hero"><span class="res-icon">${icon(ic)}</span><span class="res-title">${title}</span></div><div class="result">${body}<div class="sheet-actions">${actions.map(([t, , cls], i) => `<button class="btn ${cls || ''}" data-i="${i}">${t}</button>`).join('')}</div></div>`, (box) => {
     box.querySelectorAll('[data-i]').forEach((b) => (b.onclick = () => { closeModal(); const fn = actions[Number(b.dataset.i)][1]; if (fn) fn(); }));
   });
+  $('#modal').classList.add('game', `res-${kind}`);
 }
 
 function openDocs() {
