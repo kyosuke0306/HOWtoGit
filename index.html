@@ -9,17 +9,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=cf0503ef">
+  <link rel="stylesheet" href="css/style.css?v=4a7d0cb0">
   <script type="importmap">
   {
     "imports": {
-      "./js/app.js": "./js/app.js?v=28ecd42a",
+      "./js/app.js": "./js/app.js?v=00d711e0",
+      "./js/ask.js": "./js/ask.js?v=49cde69e",
       "./js/builder.js": "./js/builder.js?v=b5fe97b5",
       "./js/diff.js": "./js/diff.js?v=8c59de29",
       "./js/docs.js": "./js/docs.js?v=b1914027",
       "./js/git.js": "./js/git.js?v=015be560",
       "./js/graph.js": "./js/graph.js?v=e6d08f09",
-      "./js/icons.js": "./js/icons.js?v=88425826",
+      "./js/icons.js": "./js/icons.js?v=fc987738",
       "./js/keyboard.js": "./js/keyboard.js?v=f5a6d4e9",
       "./js/missions.js": "./js/missions.js?v=91d697b3",
       "./js/scenario.js": "./js/scenario.js?v=c473d604",
@@ -51,6 +52,7 @@
           <button type="button" id="btn-back" class="mini" aria-label="戻る"><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
           <button type="button" id="req-chip" class="req-chip" aria-label="依頼を開く"></button>
           <button type="button" id="btn-zoom" class="mini hidden" aria-label="元の大きさに戻す"><svg class="i" aria-hidden="true"><use href="#i-zoom-reset"/></svg></button>
+          <button type="button" id="btn-ask" class="mini ask-btn" aria-label="質問する"><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg></button>
           <button type="button" id="btn-goal" class="mini goal-btn hidden" aria-label="ゴールを見る"><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg></button>
         </div>
         <div id="opbanner"></div>
@@ -77,6 +79,22 @@
       <section class="sheet req-sheet" id="req-sheet" aria-label="依頼">
         <button type="button" class="sheet-close" data-close="req-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
         <div id="req"></div>
+      </section>
+
+      <section class="sheet ask-sheet" id="ask-sheet" aria-label="質問">
+        <div class="sheet-bar"><b><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>質問 <small>Gemini</small></b><span class="ask-tools"><button type="button" class="sheet-close" id="ask-gear" aria-label="API キーの設定"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg></button><button type="button" class="sheet-close" data-close="ask-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
+        <form class="ask-setup hidden" id="ask-setup">
+          <p>Gemini の API キーを入れると、いまの画面について質問できます。キーはこの端末にだけ保存されます。</p>
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">API キーを取得 (Google AI Studio)</a>
+          <label>API キー<input id="ask-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza..."></label>
+          <label>モデル<input id="ask-model" type="text" autocomplete="off" spellcheck="false"></label>
+          <div class="ask-setup-btns"><button type="button" class="btn ghost small" id="ask-key-clear">キーを消す</button><button type="submit" class="btn primary small">保存</button></div>
+        </form>
+        <div class="ask-msgs" id="ask-msgs"></div>
+        <form class="ask-form" id="ask-form">
+          <textarea id="ask-input" rows="1" placeholder="Git について質問" enterkeyhint="send"></textarea>
+          <button type="submit" class="enter-btn" aria-label="送信"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
+        </form>
       </section>
 
       <section class="sheet log-sheet" id="log-sheet" aria-label="ログ">
@@ -128,6 +146,6 @@
   <div id="toasts" class="toasts"></div>
   <div id="confetti" class="confetti"></div>
 
-  <script type="module" src="js/app.js?v=28ecd42a"></script>
+  <script type="module" src="js/app.js?v=00d711e0"></script>
 </body>
 </html>
