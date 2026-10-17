@@ -574,3 +574,27 @@ body.cmd-open .fab-bar { bottom: 8px; }
   .sheet { transform: translate(-50%, 16px); }
   .sheet.open { transform: translateX(-50%); }
 }
+
+/* ===== ブランチ図を画面いっぱいに (倍率 --gk で文字も拡大) ===== */
+.main-graph .graph-inner { font-size: calc(13px * var(--gk, 1)); }
+.main-graph .graph-row { font-size: 1em; gap: .35em; }
+.main-graph .pill { font-size: .85em; padding: .05em .55em; }
+.main-graph .pill b { font-size: .75em; }
+.main-graph .pill .i { width: 1em; height: 1em; }
+.main-graph .cname { font-size: 1em; }
+.main-graph .commit-btn .hash { font-size: .9em; }
+.main-graph .commit-btn .msg { font-size: 1em; }
+.main-graph .graph-svg .edge { stroke-width: calc(2.5px * var(--gk, 1)); }
+.main-graph .head-ring { stroke-width: calc(2px * var(--gk, 1)); }
+.main-graph .graph-inner .graph-row { font-size: 1em; }
+/* ゴールの小窓があるときは、その分だけ図を左に寄せる */
+/* スマホ: ゴールは上に短く、ブランチ図はその下を全幅で使う */
+@media (max-width: 559px) {
+  .goal-mini { left: 8px; right: 8px; width: auto; top: 62px; max-height: 24dvh; }
+  .goal-mini.big { max-height: 62%; }
+}
+/* 広い画面: ゴールは右、図はその左 */
+@media (min-width: 560px) { body.has-goal .main-graph { padding-right: calc(min(320px, 40%) + 16px); } }
+.main-graph .commit-btn { flex: none; }
+.main-graph .graph-rows { overflow: visible; }
+.main-graph { padding-left: 8px; }

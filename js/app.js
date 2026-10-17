@@ -107,6 +107,7 @@ $('#req-chip').onclick = () => { if (!ghost()) toggleSheet('req-sheet'); };
 // コマンド欄 (ボタン / キーボード)
 function openConsole() {
   document.body.classList.add('cmd-open');
+  refit();
   closeSheet('req-sheet');
   if (save.pad === 'kb' && isTouch()) input.focus();
 }
@@ -116,6 +117,7 @@ const ghost = () => Date.now() < ghostUntil;
 function closeConsole() {
   ghostUntil = Date.now() + 450;
   document.body.classList.remove('cmd-open');
+  refit();
   input.blur();
 }
 $('#btn-cmd').onclick = () => (document.body.classList.contains('cmd-open') ? closeConsole() : openConsole());
@@ -406,11 +408,53 @@ function renderAll() {
   renderStats();
 }
 
+// ブランチ図に使える広さ (上の帯・下のボタン列のぶんを除く)
+function graphFit(el) {
+  const cs = getComputedStyle(el);
+  return {
+    w: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+    h: el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom),
+  };
+}
+// 上に重なる帯 (依頼・ゴール) の下から図を始める
+function fitTop(el) {
+  const top = el.getBoundingClientRect().top;
+  let bottom = 0;
+  for (const sel of ['.float-top', '#goal-box']) {
+    const b = $(sel);
+    if (!b || b.classList.contains('hidden') || !b.offsetHeight) continue;
+    if (sel === '#goal-box' && innerWidth >= 560) continue; // 広い画面ではゴールは右側
+    bottom = Math.max(bottom, b.getBoundingClientRect().bottom);
+  }
+  el.style.paddingTop = `${Math.max(8, Math.round(bottom - top + 8))}px`;
+}
+let fitTimer = null;
+function refit() {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => { if (game.world && document.body.dataset.screen === 'play') renderBoard(); }, 120);
+}
+window.addEventListener('resize', refit);
+
 function renderBoard() {
+  document.body.classList.toggle('has-goal', game.mode === 'stage' && !!game.stage);
   const w = game.world;
   const repo = w.repo;
   document.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('active', b.dataset.g === game.graphTab));
+  // ゴール
+  const box = $('#goal-box');
+  if (game.mode === 'stage' && game.stage) {
+    box.classList.remove('hidden');
+    document.body.classList.add('has-goal');
+    const gw = game.stage.goalWorld;
+    const grepo = gw.dirs[STAGE_DIR].repo;
+    const refs = localRefs(grepo).filter((r) => game.stage.def.remote || r.kind !== 'remote');
+    renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
+  } else {
+    box.classList.add('hidden');
+    document.body.classList.remove('has-goal');
+  }
   const el = $('#graph');
+  fitTop(el);
   const remoteUrl = (repo && repo.remotes.origin) || (w.remotes[TEAM_URL] && game.mode !== 'stage' ? TEAM_URL : null);
   $('[data-g="remote"]').classList.toggle('hidden', !remoteUrl);
   if (!remoteUrl) game.graphTab = 'local';
@@ -418,11 +462,11 @@ function renderBoard() {
     if (!repo) {
       el.innerHTML = `<div class="graph-empty">${icon('folder', 'big')}<br>まだ Git の管理外です<br><small>clone か init から</small></div>`;
     } else {
-      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
+      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
     }
   } else {
     const remote = w.remotes[remoteUrl];
-    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, empty: '空のリポジトリです' });
+    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), empty: '空のリポジトリです' });
     const prs = remote.prs.filter((p) => p.state === 'open');
     if (prs.length) el.insertAdjacentHTML('afterbegin', `<div class="pr-list">${prs.map((p) => `<span class="pr">${icon('pr')} #${p.number} ${esc(p.title)}</span>`).join('')}</div>`);
   }
@@ -440,19 +484,6 @@ function renderBoard() {
     if (repo.stash.length) banner += `${banner ? '　' : ''}${icon('archive')} 退避 ${repo.stash.length}`;
   }
   $('#opbanner').innerHTML = banner ? `<div class="op">${banner}</div>` : '';
-  // ゴール
-  const box = $('#goal-box');
-  if (game.mode === 'stage' && game.stage) {
-    box.classList.remove('hidden');
-    document.body.classList.add('has-goal');
-    const gw = game.stage.goalWorld;
-    const grepo = gw.dirs[STAGE_DIR].repo;
-    const refs = localRefs(grepo).filter((r) => game.stage.def.remote || r.kind !== 'remote');
-    renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
-  } else {
-    box.classList.add('hidden');
-    document.body.classList.remove('has-goal');
-  }
 }
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
 $('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
