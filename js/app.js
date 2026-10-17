@@ -909,14 +909,31 @@ function startFree() {
   renderAll();
   closeConsole();
 }
+// 仲間が操作するリポジトリ: いまのフォルダの origin (なければチームのリポジトリ)
+function freeTarget() {
+  const w = game.world;
+  const origin = w.repo && w.repo.remotes.origin;
+  const url = origin && w.remotes[origin] ? origin : TEAM_URL;
+  const r = w.remotes[url];
+  const base = r.branches[r.defaultBranch] ? r.defaultBranch : Object.keys(r.branches)[0];
+  return { url, r, base, name: url.replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '') };
+}
+// 仲間が書き換えるファイル (README を優先。なければ最初のファイル)
+function freeConflictFile(tree) {
+  const files = Object.keys(tree).filter((f) => !f.startsWith('.')).sort();
+  return files.includes('README.md') ? 'README.md' : files[0] || 'README.md';
+}
 function renderFreeCard() {
+  const t = freeTarget();
+  const file = t.base ? freeConflictFile(game.world.tree(t.r.branches[t.base])) : 'README.md';
   setChip(`<span class="badge free">${icon('flask')}</span><span class="chip-text">フリー: 仲間を動かす</span>`);
   $('#req').innerHTML = `
     <div class="req-head"><span class="badge free">フリー</span><h2>仲間を動かす</h2>
       <button class="btn icon" data-act="reset" title="最初から" aria-label="最初から">${icon('restart')}</button></div>
+    <p class="free-target">${icon('cloud')} ${esc(t.name)}</p>
     <div class="free-actions">
-      <button class="btn small" data-act="push">${icon('users')}main に push</button>
-      <button class="btn small" data-act="conflict">${icon('zap')}README を変更</button>
+      <button class="btn small" data-act="push">${icon('users')}${esc(t.base || 'main')} に push</button>
+      <button class="btn small" data-act="conflict">${icon('zap')}${esc(file)} を変更</button>
       <button class="btn small" data-act="branch">${icon('branch')}ブランチを push</button>
       <button class="btn small" data-act="pr">${icon('pr')}PR を作成</button>
     </div>`;
@@ -924,29 +941,33 @@ function renderFreeCard() {
 }
 let freeN = 0;
 function freeAction(act) {
+  if (act === 'reset') return startFree();
   const w = game.world;
-  const r = w.remotes[TEAM_URL];
-  const main = w.tree(r.branches.main);
+  const { url, r, base, name } = freeTarget();
+  if (!base) { toast(`${name} はまだ空です。先に push しよう`); return; }
+  const main = w.tree(r.branches[base]);
   const who = Math.random() < 0.5 ? '田中' : '佐藤';
   freeN++;
-  if (act === 'reset') return startFree();
   if (act === 'push') {
-    w.teammateCommit(TEAM_URL, 'main', { 'CHANGELOG.md': (main['CHANGELOG.md'] || '# 変更履歴\n') + `- ${who}: 修正 #${freeN}\n` }, `細かい修正 #${freeN}`, who);
-    teamToast(who, 'main に push しました');
+    w.teammateCommit(url, base, { 'CHANGELOG.md': (main['CHANGELOG.md'] || '# 変更履歴\n') + `- ${who}: 修正 #${freeN}\n` }, `細かい修正 #${freeN}`, who);
+    teamToast(who, `${base} に push しました`);
   } else if (act === 'conflict') {
-    const lines = (main['README.md'] || FILES['README.md']).split('\n');
-    lines[1] = `カフェのWebサイトです。(${who}が更新 #${freeN})`;
-    w.teammateCommit(TEAM_URL, 'main', { 'README.md': lines.join('\n') }, 'READMEの説明を更新', who);
-    teamToast(who, 'README.md の2行目を変えて push しました');
+    const file = freeConflictFile(main);
+    const lines = (main[file] ?? (url === TEAM_URL ? FILES['README.md'] : '')).split('\n');
+    // README は説明の行 (2行目)、それ以外は1行目を書き換える
+    const at = file === 'README.md' && lines.length > 2 ? 1 : 0;
+    lines[at] = `${who}が更新 #${freeN}`;
+    w.teammateCommit(url, base, { [file]: lines.join('\n') }, `${file}を更新`, who);
+    teamToast(who, `${file} の${at + 1}行目を変えて push しました`);
   } else if (act === 'branch') {
     const b = `feature/idea-${freeN}`;
-    w.teammateCommit(TEAM_URL, b, { [`idea-${freeN}.txt`]: `アイデア ${freeN}\n` }, `アイデア${freeN}を追加`, who, 'main');
+    w.teammateCommit(url, b, { [`idea-${freeN}.txt`]: `アイデア ${freeN}\n` }, `アイデア${freeN}を追加`, who, base);
     teamToast(who, `${b} を push しました`);
   } else if (act === 'pr') {
     const b = `feature/pr-${freeN}`;
-    w.teammateCommit(TEAM_URL, b, { [`page-${freeN}.html`]: `<h1>Page ${freeN}</h1>\n` }, `ページ${freeN}を追加`, who, 'main');
+    w.teammateCommit(url, b, { [`page-${freeN}.html`]: `<h1>Page ${freeN}</h1>\n` }, `ページ${freeN}を追加`, who, base);
     const n = ++w.prCounter;
-    r.prs.push({ number: n, title: `ページ${freeN}を追加`, head: b, base: 'main', state: 'open', author: who });
+    r.prs.push({ number: n, title: `ページ${freeN}を追加`, head: b, base, state: 'open', author: who });
     teamToast(who, `PR #${n} を作りました`);
   }
   renderAll();
