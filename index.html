@@ -9,11 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=a5e81e90">
+  <link rel="stylesheet" href="css/style.css?v=7d041571">
   <script type="importmap">
   {
     "imports": {
-      "./js/app.js": "./js/app.js?v=4a2c3c0a",
+      "./js/app.js": "./js/app.js?v=24b3ede6",
       "./js/builder.js": "./js/builder.js?v=b5fe97b5",
       "./js/diff.js": "./js/diff.js?v=8c59de29",
       "./js/docs.js": "./js/docs.js?v=b1914027",
@@ -51,7 +51,11 @@
       <div id="graph" class="graph main-graph"></div>
 
       <div class="float-top">
-        <button type="button" id="req-chip" class="req-chip" aria-label="依頼を開く"></button>
+        <div class="mini-bar">
+          <button type="button" id="btn-back" class="mini" aria-label="戻る"><svg class="i" aria-hidden="true"><use href="#i-back"/></svg></button>
+          <button type="button" id="req-chip" class="req-chip" aria-label="依頼を開く"></button>
+          <button type="button" id="btn-goal" class="mini goal-btn hidden" aria-label="ゴールを見る"><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg></button>
+        </div>
         <div id="opbanner"></div>
       </div>
 
@@ -69,7 +73,7 @@
         </div>
         <button id="btn-files" class="fab" aria-label="ファイル"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg></button>
         <button id="btn-log" class="fab" aria-label="ログ"><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg></button>
-        <button id="btn-cmd" class="fab primary"><svg class="i" aria-hidden="true"><use href="#i-keyboard"/></svg><span>コマンド</span></button>
+        <button id="btn-cmd" class="fab primary" aria-label="コマンド"><svg class="i" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
       </div>
 
       <section class="sheet req-sheet" id="req-sheet" aria-label="依頼">
@@ -126,6 +130,6 @@
   <div id="toasts" class="toasts"></div>
   <div id="confetti" class="confetti"></div>
 
-  <script type="module" src="js/app.js?v=4a2c3c0a"></script>
+  <script type="module" src="js/app.js?v=24b3ede6"></script>
 </body>
 </html>
