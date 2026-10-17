@@ -98,7 +98,12 @@ function openSheet(id) {
   $('#' + id).classList.add('open');
   if (id === 'log-sheet') scrollTerm();
 }
-function closeSheet(id) { $('#' + id).classList.remove('open'); }
+function closeSheet(id) {
+  const el = $('#' + id);
+  if (id === 'req-sheet' && el.classList.contains('open') && goalWithReq) { goalWithReq = false; showGoal(false); }
+  el.classList.remove('open');
+}
+let goalWithReq = false; // 依頼と一緒に出したゴールは、依頼を閉じたら隠す
 function toggleSheet(id) { $('#' + id).classList.contains('open') ? closeSheet(id) : openSheet(id); }
 document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => closeSheet(b.dataset.close)));
 $('#btn-log').onclick = () => { if (!ghost()) toggleSheet('log-sheet'); };
@@ -422,7 +427,7 @@ function fitTop(el) {
   let bottom = 0;
   for (const sel of ['.float-top', '#goal-box']) {
     const b = $(sel);
-    if (!b || b.classList.contains('hidden') || !b.offsetHeight) continue;
+    if (!b || b.classList.contains('hidden') || !b.offsetHeight || (sel === '#goal-box' && !b.classList.contains('show'))) continue;
     if (sel === '#goal-box' && innerWidth >= 560) continue; // 広い画面ではゴールは右側
     bottom = Math.max(bottom, b.getBoundingClientRect().bottom);
   }
@@ -444,6 +449,7 @@ function renderBoard() {
   const box = $('#goal-box');
   if (game.mode === 'stage' && game.stage) {
     box.classList.remove('hidden');
+    $('#btn-goal').classList.remove('hidden');
     document.body.classList.add('has-goal');
     const gw = game.stage.goalWorld;
     const grepo = gw.dirs[STAGE_DIR].repo;
@@ -451,6 +457,7 @@ function renderBoard() {
     renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
   } else {
     box.classList.add('hidden');
+    $('#btn-goal').classList.add('hidden');
     document.body.classList.remove('has-goal');
   }
   const el = $('#graph');
@@ -487,6 +494,13 @@ function renderBoard() {
 }
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
 $('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
+// ゴールはふだん隠しておき、旗ボタンで出し入れする
+function showGoal(on) {
+  $('#goal-box').classList.toggle('show', on);
+  $('#btn-goal').classList.toggle('on', on);
+  refit();
+}
+$('#btn-goal').onclick = () => { goalWithReq = false; if (!ghost()) showGoal(!$('#goal-box').classList.contains('show')); };
 
 function renderStats() {
   const L = levelInfo(save.xp);
@@ -520,6 +534,9 @@ function startStage(idx) {
   game.stage.goal = stageShape(game.stage.goalWorld, def);
   termHtml(`<div class="banner">${icon('flag')} ${idx + 1}. ${esc(def.title)}</div>`);
   setScreen('play', `ステージ ${idx + 1}`);
+  $('#goal-box').classList.remove('big');
+  showGoal(true);
+  goalWithReq = true;
   renderAll();
   closeConsole();
   openSheet('req-sheet');
@@ -993,6 +1010,7 @@ function route() {
 }
 window.addEventListener('hashchange', route);
 $('#btn-home').onclick = () => go('#/');
+$('#btn-back').onclick = () => go(game.mode === 'stage' ? '#/stages' : '#/');
 
 function nextStageIdx() {
   const i = STAGES.findIndex((s) => !save.stars[s.id]);

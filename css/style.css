@@ -598,3 +598,28 @@ body.cmd-open .fab-bar { bottom: 8px; }
 .main-graph .commit-btn { flex: none; }
 .main-graph .graph-rows { overflow: visible; }
 .main-graph { padding-left: 8px; }
+
+/* ===== プレイ中はブランチ図だけ: ヘッダーを消し、操作は小さな丸ボタンに ===== */
+body[data-screen="play"] .topbar { display: none; }
+.mini-bar { display: flex; align-items: center; gap: 6px; pointer-events: none; }
+.mini-bar > * { pointer-events: auto; }
+.mini, .float-top .req-chip { height: 38px; min-height: 38px; border-radius: 19px; border: 1px solid var(--border); background: color-mix(in srgb, var(--bg-panel) 80%, transparent); backdrop-filter: blur(6px); color: var(--text); box-shadow: 0 3px 10px rgba(0, 0, 0, .25); cursor: pointer; }
+.mini { width: 38px; display: grid; place-items: center; padding: 0; flex: none; }
+.mini.hidden { display: none; }
+.goal-btn { color: var(--accent); }
+.goal-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.float-top .req-chip { width: auto; max-width: calc(100% - 96px); padding: 0 12px 0 6px; gap: 6px; }
+.float-top .req-chip .chip-text { display: none; }
+.float-top .req-chip .chip-open { display: none; }
+.goal-mini:not(.show) { display: none; }
+.goal-mini { top: 54px; }
+.fab { height: 40px; min-width: 40px; padding: 0 10px; background: color-mix(in srgb, var(--bg-panel) 80%, transparent); backdrop-filter: blur(6px); }
+.fab.primary { padding: 0; width: 52px; height: 52px; border-radius: 26px; }
+.fab.primary .i { width: 24px; height: 24px; }
+.view-tabs { background: color-mix(in srgb, var(--bg-panel) 80%, transparent); }
+.main-graph { padding-bottom: 68px; }
+@media (min-width: 560px) {
+  .float-top { left: 8px; right: 8px; transform: none; width: auto; }
+  body.has-goal .main-graph { padding-right: 0; }
+  body.has-goal:has(.goal-mini.show) .main-graph { padding-right: calc(min(320px, 40%) + 16px); }
+}
