@@ -10,6 +10,7 @@ import { COMMANDS, CONCEPTS, REF_SYNTAX, FIRST_TIME } from './docs.js';
 import { icon, avatar, injectSprite } from './icons.js';
 import { createKeyboard } from './keyboard.js';
 import { ask, loadSettings, saveSettings, formatAnswer, DEFAULT_MODEL } from './ask.js';
+import { diagnose, LOOK, LAST_RESORT } from './help.js';
 import { GROUPS, DESC, baseFor, cmdOf, chipsFor, opChips } from './builder.js';
 
 injectSprite();
@@ -882,19 +883,53 @@ function renderChallengeCard() {
       <span class="badge challenge">依頼 ${c.n}</span>
       <h2>${esc(m.title)}</h2>
       <span class="stats-inline"><span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span></span>
+      <button class="btn icon" id="btn-restart" title="最初から" aria-label="最初から">${icon('restart')}</button>
     </div>
     <div class="story"><div class="avatar">${avatar(m.who, 34)}</div><div><p>${story}</p>${m.detail ? `<p class="detail muted">${m.detail}</p>` : ''}</div></div>
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
     <div class="req-actions">
       ${c.state === 'over' ? `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度</button>`
         : c.result ? `<button class="btn primary" id="btn-next">次の依頼 ${icon('play')}</button>`
-        : `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント ${c.hints}/${hints.length}</button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
+        : `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント ${c.hints}/${hints.length}</button><button class="btn help-btn" id="btn-help" ${hp <= 1 ? 'disabled' : ''}>${icon('alert')}HELP <small>${icon('heart')}-1</small></button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
     </div>`;
   $('#req').querySelectorAll('.story p, .hints li').forEach(addCopyButtons);
   if ($('#btn-hint')) $('#btn-hint').onclick = showHint;
   if ($('#btn-skip')) $('#btn-skip').onclick = skipMission;
   if ($('#btn-next')) $('#btn-next').onclick = nextMission;
   if ($('#btn-retry')) $('#btn-retry').onclick = startChallenge;
+  if ($('#btn-help')) $('#btn-help').onclick = useHelp;
+  $('#btn-restart').onclick = () => { if (confirm('チーム開発を最初からやり直しますか？')) startChallenge(); };
+}
+
+// ---------- HELP: 元に戻す手順を教える (自動では直さない) ----------
+function useHelp() {
+  const c = game.ch;
+  if (game.mode === 'challenge') {
+    if (!c || c.result || c.hearts <= 1) return;
+    if (!confirm('HELP を使いますか？ (ライフ -1)\n元に戻す手順を教えます。')) return;
+    c.hearts--;
+    renderAll();
+  }
+  openHelp();
+}
+function openHelp() {
+  const items = diagnose(game.world, { teamPath: game.mode === 'challenge' ? api.teamPath() : null });
+  const step = ([label, cmd]) => `<li><span>${esc(label)}</span><button type="button" class="help-cmd" data-cmd="${esc(cmd)}"><code>${esc(cmd)}</code></button></li>`;
+  const block = (title, why, steps, cls = '') => `<div class="help-item ${cls}"><b>${esc(title)}</b>${why ? `<p>${esc(why)}</p>` : ''}<ol>${steps.map(step).join('')}</ol></div>`;
+  const body = `<p class="help-lead">コマンドをタップすると入力欄に入ります。自分で実行して直そう。</p>
+    ${block('1. まず状況を見る', '', LOOK, 'look')}
+    ${items.length ? items.map((it, i) => block(`${i + 2}. ${it.title}`, it.why, it.steps)).join('') : '<div class="help-item ok"><b>2. 壊れているところは見つかりません</b><p>変更も作業途中もありません。ブランチの形が思ったものと違うなら、下の方法で前の状態に戻せます。</p></div>'}
+    ${block('どうしても戻らないとき', 'reflog には HEAD が動いた記録がすべて残っています。壊れる前の行を探して、そこへ戻します。', LAST_RESORT, 'last')}`;
+  openModal(`${icon('alert')} HELP: 元に戻すには`, body, (box) => {
+    box.querySelectorAll('.help-cmd').forEach((b) => (b.onclick = () => {
+      closeModal();
+      openConsole();
+      input.value = b.dataset.cmd;
+      input.setSelectionRange(input.value.length, input.value.length);
+      updateDesc();
+      renderBuilder();
+    }));
+  });
 }
 
 // ---------- フリー ----------
@@ -936,12 +971,14 @@ function renderFreeCard() {
       <button class="btn small" data-act="conflict">${icon('zap')}${esc(file)} を変更</button>
       <button class="btn small" data-act="branch">${icon('branch')}ブランチを push</button>
       <button class="btn small" data-act="pr">${icon('pr')}PR を作成</button>
-    </div>`;
+    </div>
+    <div class="req-actions"><button class="btn help-btn" data-act="help">${icon('alert')}HELP</button></div>`;
   $('#req').querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => freeAction(b.dataset.act)));
 }
 let freeN = 0;
 function freeAction(act) {
   if (act === 'reset') return startFree();
+  if (act === 'help') return openHelp();
   const w = game.world;
   const { url, r, base, name } = freeTarget();
   if (!base) { toast(`${name} はまだ空です。先に push しよう`); return; }

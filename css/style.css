@@ -668,3 +668,17 @@ body[data-screen="home"] .brand { visibility: hidden; }
 .home-hero h1 { margin-top: 10px; }
 .free-target { display: flex; align-items: center; gap: 6px; margin: 0 0 8px; color: var(--muted); font-family: var(--mono); font-size: 13px; }
 .free-target .i { width: 16px; height: 16px; }
+/* HELP */
+.help-btn { color: var(--warn); }
+.help-btn small { display: inline-flex; align-items: center; gap: 1px; color: var(--danger); font-size: 11px; margin-left: 2px; }
+.help-btn small .i { width: 11px; height: 11px; }
+.help-lead { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
+.help-item { padding: 10px 12px; border-radius: 12px; background: var(--bg-raised); margin-bottom: 10px; }
+.help-item > b { font-size: 14px; }
+.help-item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.help-item ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.help-item li span { display: block; margin-bottom: 3px; }
+.help-cmd { display: inline-block; max-width: 100%; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-term); color: #e6edf3; cursor: pointer; text-align: left; }
+.help-cmd code { font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+.help-item.ok { border-left: 3px solid var(--accent); }
+.help-item.last { border: 1px dashed var(--border); background: transparent; }
