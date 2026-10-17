@@ -659,3 +659,10 @@ body[data-screen="play"] .topbar { display: none; }
 .btn-settings { display: none; }
 body[data-screen="home"] .btn-settings { display: inline-flex; }
 .modal .ask-setup h4 { margin: 0; font-size: 14px; }
+/* トップ画面: ヘッダーは右上のボタンだけ。ロゴは背景に溶け込ませる */
+body[data-screen="home"] .topbar { background: transparent; border-bottom: 0; }
+body[data-screen="home"] .brand { visibility: hidden; }
+.home-hero { padding: 8px 0 28px; }
+.home-logo { width: auto; height: auto; border-radius: 0; background: none; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--accent) 45%, transparent)); }
+.home-logo .i { width: 84px; height: 84px; stroke-width: 2; }
+.home-hero h1 { margin-top: 10px; }

@@ -1211,30 +1211,29 @@ function renderHome() {
     <div class="home-hero">
       <span class="home-logo">${icon('logo')}</span>
       <h1>HOW<em>to</em>Git</h1>
-      <p>ブランチを動かして Git を覚えよう</p>
     </div>
     <div class="home-cards">
       <a class="mode-card lesson" href="#/stages">
         <span class="mode-icon">${icon('flag')}</span>
-        <span class="mode-body"><b>ステージ</b><small>ゴールの形にブランチを合わせる</small>
+        <span class="mode-body"><b>コマンドを覚える</b>
           <span class="mode-progress"><i style="width:${(done / STAGES.length) * 100}%"></i></span></span>
         <span class="mode-meta">${icon('star')}${totalStars()}</span>
       </a>
       <a class="mode-card challenge" href="#/challenge">
         <span class="mode-icon">${icon('gamepad')}</span>
-        <span class="mode-body"><b>チャレンジ</b><small>${playing ? '続きから' : '仲間の依頼を判断してさばく'}</small></span>
+        <span class="mode-body"><b>チーム開発</b>${playing ? '<small>続きから</small>' : ''}</span>
         <span class="mode-meta">${save.bestClear ? `${icon('trophy')}${save.bestClear}件` : ''}</span>
       </a>
       <a class="mode-card free" href="#/free">
         <span class="mode-icon">${icon('flask')}</span>
-        <span class="mode-body"><b>フリー</b><small>自由に試す</small></span>
+        <span class="mode-body"><b>自由に試す</b></span>
         <span class="mode-meta">${icon('chevron')}</span>
       </a>
     </div>`;
 }
 
 function renderStageSelect() {
-  setScreen('lessons', 'ステージ');
+  setScreen('lessons', 'コマンドを覚える');
   const next = nextStageIdx();
   const chNames = { 1: '記録とブランチ', 2: '合流', 3: '移動と取り消し', 4: 'チーム' };
   let html = '';
