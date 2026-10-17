@@ -654,7 +654,8 @@ body[data-screen="play"] .topbar { display: none; }
 .ask-nokey.hidden, .ask-form.hidden { display: none; }
 .ask-nokey p { margin: 0; }
 .modal .ask-setup { border-bottom: 0; padding: 0; }
-.home-setting { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 480px; margin: 16px auto 0; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--muted); font-size: 13px; cursor: pointer; }
-.home-setting span { flex: 1; text-align: left; color: var(--text); }
-.home-setting .i { width: 18px; height: 18px; }
 .ask-msgs.hidden { display: none; }
+/* 設定 (歯車) はトップ画面の右上だけ */
+.btn-settings { display: none; }
+body[data-screen="home"] .btn-settings { display: inline-flex; }
+.modal .ask-setup h4 { margin: 0; font-size: 14px; }
