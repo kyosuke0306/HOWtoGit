@@ -472,6 +472,7 @@ function renderBoard() {
   const remoteUrl = (repo && repo.remotes.origin) || (w.remotes[TEAM_URL] && game.mode !== 'stage' ? TEAM_URL : null);
   $('[data-g="remote"]').classList.toggle('hidden', !remoteUrl);
   $('#btn-code').classList.toggle('hidden', game.mode === 'stage' || !repo);
+  $('#btn-help').classList.toggle('hidden', game.mode === 'stage');
   if (!remoteUrl) game.graphTab = 'local';
   if (game.graphTab === 'local') {
     if (!repo) {
@@ -612,6 +613,7 @@ function openAsk() {
 }
 $('#btn-ask').onclick = () => { if (!ghost()) ($('#ask-sheet').classList.contains('open') ? closeSheet('ask-sheet') : openAsk()); };
 $('#btn-settings').onclick = openAskSettings;
+$('#btn-help').onclick = () => { if (!ghost()) useHelp(); };
 $('#ask-go-home').onclick = () => { closeSheet('ask-sheet'); go('#/'); };
 // API キーの設定 (トップ画面からだけ開く)
 function openAskSettings() {
@@ -890,14 +892,13 @@ function renderChallengeCard() {
     <div class="req-actions">
       ${c.state === 'over' ? `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度</button>`
         : c.result ? `<button class="btn primary" id="btn-next">次の依頼 ${icon('play')}</button>`
-        : `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント ${c.hints}/${hints.length}</button><button class="btn help-btn" id="btn-help" ${hp <= 1 ? 'disabled' : ''}>${icon('alert')}HELP <small>${icon('heart')}-1</small></button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
+        : `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント ${c.hints}/${hints.length}</button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
     </div>`;
   $('#req').querySelectorAll('.story p, .hints li').forEach(addCopyButtons);
   if ($('#btn-hint')) $('#btn-hint').onclick = showHint;
   if ($('#btn-skip')) $('#btn-skip').onclick = skipMission;
   if ($('#btn-next')) $('#btn-next').onclick = nextMission;
   if ($('#btn-retry')) $('#btn-retry').onclick = startChallenge;
-  if ($('#btn-help')) $('#btn-help').onclick = useHelp;
   $('#btn-restart').onclick = () => { if (confirm('チーム開発を最初からやり直しますか？')) startChallenge(); };
 }
 
@@ -905,7 +906,8 @@ function renderChallengeCard() {
 function useHelp() {
   const c = game.ch;
   if (game.mode === 'challenge') {
-    if (!c || c.result || c.hearts <= 1) return;
+    if (!c || c.state !== 'playing') return;
+    if (c.hearts <= 1) { toast('ライフが残り1つなので HELP は使えません'); return; }
     if (!confirm('HELP を使いますか？ (ライフ -1)\n元に戻す手順を教えます。')) return;
     c.hearts--;
     renderAll();
@@ -971,14 +973,12 @@ function renderFreeCard() {
       <button class="btn small" data-act="conflict">${icon('zap')}${esc(file)} を変更</button>
       <button class="btn small" data-act="branch">${icon('branch')}ブランチを push</button>
       <button class="btn small" data-act="pr">${icon('pr')}PR を作成</button>
-    </div>
-    <div class="req-actions"><button class="btn help-btn" data-act="help">${icon('alert')}HELP</button></div>`;
+    </div>`;
   $('#req').querySelectorAll('[data-act]').forEach((b) => (b.onclick = () => freeAction(b.dataset.act)));
 }
 let freeN = 0;
 function freeAction(act) {
   if (act === 'reset') return startFree();
-  if (act === 'help') return openHelp();
   const w = game.world;
   const { url, r, base, name } = freeTarget();
   if (!base) { toast(`${name} はまだ空です。先に push しよう`); return; }
