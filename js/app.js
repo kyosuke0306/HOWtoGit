@@ -39,6 +39,7 @@ const game = {
   mode: null,
   lastCmd: '',
   graphTab: 'local',
+  zoom: 1,
   stage: null,
   ch: null,
   chat(who, text) { teamToast(who, text); },
@@ -47,6 +48,7 @@ const api = createApi(game);
 
 function setWorld(w) {
   game.world = w;
+  setZoom(1, true);
   game.shell = new Shell(w, {
     openEditor: (f) => openEditor(f),
     clear: () => { out.innerHTML = ''; },
@@ -472,11 +474,11 @@ function renderBoard() {
     if (!repo) {
       el.innerHTML = `<div class="graph-empty">${icon('folder', 'big')}<br>まだ Git の管理外です<br><small>clone か init から</small></div>`;
     } else {
-      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
+      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
     }
   } else {
     const remote = w.remotes[remoteUrl];
-    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), empty: '空のリポジトリです' });
+    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: '空のリポジトリです' });
     const prs = remote.prs.filter((p) => p.state === 'open');
     if (prs.length) el.insertAdjacentHTML('afterbegin', `<div class="pr-list">${prs.map((p) => `<span class="pr">${icon('pr')} #${p.number} ${esc(p.title)}</span>`).join('')}</div>`);
   }
@@ -495,6 +497,66 @@ function renderBoard() {
   }
   $('#opbanner').innerHTML = banner ? `<div class="op">${banner}</div>` : '';
 }
+// ---------- ブランチ図の拡大縮小 (2本指 / Ctrl+ホイール) ----------
+let zooming = false;
+function setZoom(z, quiet) {
+  game.zoom = Math.min(3, Math.max(0.4, z));
+  if (Math.abs(game.zoom - 1) < 0.04) game.zoom = 1;
+  $('#btn-zoom').classList.toggle('hidden', game.zoom === 1);
+  if (!quiet && game.world) renderBoard();
+}
+// 指の中心がずれないように拡大してスクロール位置を合わせる
+function zoomAt(z, cx, cy) {
+  const el = $('#graph');
+  const r = el.getBoundingClientRect();
+  const x = cx - r.left, y = cy - r.top;
+  const ratio = Math.min(3, Math.max(0.4, z)) / game.zoom;
+  const sx = (el.scrollLeft + x) * ratio - x, sy = (el.scrollTop + y) * ratio - y;
+  zooming = true;
+  setZoom(z);
+  zooming = false;
+  el.scrollLeft = sx;
+  el.scrollTop = sy;
+}
+{
+  const el = $('#graph');
+  // 指を動かしている間は見た目だけ拡大し、離したら描き直す (触っている要素を消さないため)
+  let pinch = null;
+  const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  const mid = (t) => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
+  el.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 2) return;
+    const inner = el.querySelector('.graph-inner');
+    if (!inner) return;
+    const [cx, cy] = mid(e.touches);
+    const r = inner.getBoundingClientRect();
+    inner.style.transformOrigin = `${cx - r.left}px ${cy - r.top}px`;
+    pinch = { d: dist(e.touches), z: game.zoom, z1: game.zoom, cx, cy, inner };
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    pinch.z1 = Math.min(3, Math.max(0.4, pinch.z * dist(e.touches) / pinch.d));
+    pinch.inner.style.transform = `scale(${pinch.z1 / pinch.z})`;
+  }, { passive: false });
+  const endPinch = (e) => {
+    if (!pinch || e.touches.length >= 2) return;
+    const { z1, cx, cy, inner } = pinch;
+    pinch = null;
+    inner.style.transform = '';
+    zoomAt(z1, cx, cy);
+  };
+  el.addEventListener('touchend', endPinch);
+  el.addEventListener('touchcancel', endPinch);
+  el.addEventListener('gesturestart', (e) => e.preventDefault()); // iOS のページ拡大を止める
+  el.addEventListener('wheel', (e) => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    zoomAt(game.zoom * Math.exp(-e.deltaY * 0.01), e.clientX, e.clientY);
+  }, { passive: false });
+}
+$('#btn-zoom').onclick = () => setZoom(1);
+
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
 $('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
 // ゴールはふだん隠しておき、旗ボタンで出し入れする

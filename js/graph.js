@@ -118,7 +118,7 @@ function fitDims(base, fit, rows, cols) {
 }
 
 // 文字を右の余白いっぱいまで大きくする (はみ出すなら縮める)
-function fitText(container, avail, D) {
+function fitText(container, avail, D, z = 1, real = avail) {
   const inner = container.firstElementChild;
   let need = 0;
   for (const row of inner.querySelectorAll('.graph-row')) {
@@ -126,11 +126,11 @@ function fitText(container, avail, D) {
     if (last) need = Math.max(need, last.getBoundingClientRect().right - row.getBoundingClientRect().left + 14);
   }
   if (!need) return;
-  const max = Math.min(4, D.row / 30);
+  const max = Math.min(4 * z, D.row / 30);
   const k = Math.max(0.8, Math.min(max, D.k * (avail * 0.94) / need));
   inner.style.setProperty('--gk', k.toFixed(3));
   // 余った横幅は左右に分けて、図を真ん中に置く
-  const off = Math.max(0, (avail - need * k / D.k) / 2 - 8);
+  const off = Math.max(0, (real - need * k / D.k) / 2 - 8);
   if (off > 0) {
     const lines = inner.querySelector('.graph-lines'), rows = inner.querySelector('.graph-rows');
     lines.style.left = `${off}px`;
@@ -147,9 +147,11 @@ export function renderGraph(container, world, refs, opts = {}) {
     prevIds.set(key, new Set());
     return;
   }
-  const before = prevIds.has(key) ? measure(container) : new Map();
+  const before = prevIds.has(key) && !opts.noAnim ? measure(container) : new Map();
   const L = layout(world, refs);
+  const z = opts.zoom || 1; // 利用者の拡大縮小
   if (opts.fit) D = fitDims(D, opts.fit, L.nodes.length, L.cols);
+  if (opts.fit && z !== 1) D = { row: D.row * z, col: D.col * z, pad: D.pad * z, r: D.r * z, k: D.k * z };
   const old = prevIds.get(key) || new Set();
   const width = D.pad * 2 + (L.cols - 1) * D.col;
   const height = D.pad * 2 + (L.nodes.length - 1) * D.row;
@@ -197,7 +199,7 @@ export function renderGraph(container, world, refs, opts = {}) {
     const b = e.target.closest('[data-pick]');
     if (b && opts.onPick) opts.onPick(b.dataset.pick, b.dataset.val);
   };
-  if (opts.fit) fitText(container, opts.fit.w - width - 2, D);
+  if (opts.fit) fitText(container, opts.fit.w * z - width - 2, D, z, opts.fit.w - width - 2);
   animateFrom(container, before);
   prevIds.set(key, new Set(L.nodes.map((n) => n.id)));
 }
