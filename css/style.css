@@ -433,7 +433,7 @@ body[data-pad="build"] .kb { display: none; }
 .mini-stars .star { color: var(--border); }
 .mini-stars .star.on { color: #e3b341; animation: none; }
 .lesson-box, .answer-box { text-align: left; background: var(--bg-raised); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
-.lesson-box b, .answer-box b { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--accent-2); }
+.lesson-box > b, .answer-box > b { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--accent-2); }
 .lesson-box p { margin: 4px 0 0; }
 .answer-box code { display: block; margin-top: 4px; background: var(--bg-term); color: #7ee787; padding: 6px 10px; border-radius: 8px; white-space: pre-wrap; font-size: 13px; }
 .fail-reason { font-weight: 700; color: var(--danger); font-size: 17px; }
@@ -680,3 +680,51 @@ body[data-screen="home"] .brand { visibility: hidden; }
 .help-item.ok { border-left: 3px solid var(--accent); }
 .help-item.last { border: 1px dashed var(--border); background: transparent; }
 .help-mini { width: auto; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--warn); }
+
+/* ===== ゲーム風ポップアップ ===== */
+/* 確認ダイアログ */
+.gdialog { position: fixed; inset: 0; z-index: 60; display: none; align-items: center; justify-content: center; padding: 24px; background: rgba(1, 4, 9, .7); backdrop-filter: blur(3px); }
+.gdialog.open { display: flex; animation: fadeIn .15s; }
+.gdialog-box { width: min(340px, 100%); padding: 22px 18px 16px; border-radius: 22px; text-align: center; background: var(--bg-panel); border: 2px solid var(--border); box-shadow: 0 18px 50px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .05); animation: popIn .35s cubic-bezier(.2, 1.4, .4, 1); }
+.gdialog-icon { width: 64px; height: 64px; margin: -54px auto 10px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: #fff; border: 4px solid var(--bg-panel); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+.gdialog-icon .i { width: 30px; height: 30px; stroke-width: 2.4; }
+.gdialog.warn .gdialog-icon { background: var(--warn); }
+.gdialog.danger .gdialog-icon { background: var(--danger); }
+.gdialog h3 { margin: 4px 0 4px; font-size: 20px; }
+.gdialog p { margin: 0; color: var(--muted); font-size: 14px; }
+.gdialog p:empty { display: none; }
+.gdialog-cost { display: flex; flex-direction: column; align-items: center; gap: 2px; margin-top: 12px; }
+.gdialog-cost:empty { display: none; }
+.gdialog-cost .hearts .i { width: 26px; height: 26px; }
+.gdialog-cost .breaking .i { color: var(--danger); animation: heartBreak 1s ease-in-out infinite; }
+.gdialog-cost small { color: var(--danger); font-weight: 700; font-size: 13px; }
+.gdialog-btns { display: flex; gap: 10px; margin-top: 18px; }
+.gbtn { flex: 1; height: 48px; border-radius: 14px; border: 0; font-size: 16px; font-weight: 700; cursor: pointer; background: var(--bg-raised); color: var(--text); box-shadow: 0 4px 0 rgba(0, 0, 0, .35); transition: transform .08s, box-shadow .08s; }
+.gbtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .35); }
+.gbtn.primary { background: var(--accent-2); color: #fff; box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-2) 55%, #000); }
+.gdialog.warn .gbtn.primary { background: var(--warn); color: #1c1300; box-shadow: 0 4px 0 color-mix(in srgb, var(--warn) 55%, #000); }
+.gdialog.danger .gbtn.primary { background: var(--danger); box-shadow: 0 4px 0 color-mix(in srgb, var(--danger) 55%, #000); }
+@keyframes popIn { 0% { transform: scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+@keyframes heartBreak { 0%, 100% { transform: none; opacity: 1; } 50% { transform: scale(.75) rotate(-12deg); opacity: .45; } }
+
+/* 結果 (クリア / 成功 / 失敗 / ゲームオーバー) */
+.modal.game { align-items: center; padding: 20px; backdrop-filter: blur(3px); }
+.modal.game .modal-box { border-radius: 24px; width: min(420px, 100%); border: 2px solid var(--border); animation: popIn .4s cubic-bezier(.2, 1.4, .4, 1); overflow: visible; margin-top: 40px; }
+.modal.game .modal-head { display: none; }
+.modal.game .modal-body { padding-top: 0; text-align: center; }
+.res-hero { display: flex; flex-direction: column; align-items: center; margin-top: -42px; }
+.res-icon { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: var(--accent); border: 5px solid var(--bg-panel); box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); animation: glow 1.6s ease-out infinite; }
+.res-icon .i { width: 42px; height: 42px; stroke-width: 2.4; }
+.res-title { margin-top: 6px; font-size: 30px; font-weight: 900; letter-spacing: 1px; color: var(--accent); animation: popIn .5s .1s cubic-bezier(.2, 1.6, .4, 1) backwards; }
+.res-fail .res-icon, .res-over .res-icon { background: var(--danger); animation: none; }
+.res-fail .res-title, .res-over .res-title { color: var(--danger); }
+.res-fail .modal-box, .res-over .modal-box { animation: popIn .3s ease-out, shake .4s .3s; }
+.res-clear .res-icon { background: #e3b341; }
+.res-clear .res-title { color: #e3b341; }
+.modal.game .sheet-actions { display: flex; gap: 10px; margin-top: 16px; }
+.modal.game .sheet-actions .btn { flex: 1; height: 50px; border-radius: 14px; font-size: 16px; font-weight: 700; border: 0; background: var(--bg-raised); box-shadow: 0 4px 0 rgba(0, 0, 0, .35); }
+.modal.game .sheet-actions .btn.primary { background: var(--accent); color: #fff; box-shadow: 0 4px 0 color-mix(in srgb, var(--accent) 55%, #000); }
+.modal.game .sheet-actions .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .35); }
+@keyframes glow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
+.modal.game .modal-body { overflow: visible; }
+.lesson-box p b { color: var(--accent-2); }
