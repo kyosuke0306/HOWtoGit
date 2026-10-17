@@ -469,6 +469,7 @@ function renderBoard() {
   fitTop(el);
   const remoteUrl = (repo && repo.remotes.origin) || (w.remotes[TEAM_URL] && game.mode !== 'stage' ? TEAM_URL : null);
   $('[data-g="remote"]').classList.toggle('hidden', !remoteUrl);
+  $('#btn-code').classList.toggle('hidden', game.mode === 'stage' || !repo);
   if (!remoteUrl) game.graphTab = 'local';
   if (game.graphTab === 'local') {
     if (!repo) {
@@ -906,6 +907,48 @@ function openFiles() {
   });
 }
 $('#btn-files').onclick = openFiles;
+
+// ---------- コードを書く (実際には書かず、ボタンでそれらしい変更を入れる) ----------
+let codeN = 0;
+function codeLines(file, n) {
+  const ext = (file.match(/\.(\w+)$/) || [])[1];
+  if (file === 'README.md') return [`- ${game.world.user.name || 'あなた'}`];
+  if (ext === 'html') return [`<section id="s${n}">`, `  <p>お知らせ ${n}</p>`, '</section>'];
+  if (ext === 'js') return [`function feature${n}() {`, `  return ${n};`, '}'];
+  if (ext === 'css') return [`.box${n} {`, `  margin: ${n * 2}px;`, '}'];
+  if (ext === 'md') return [`- メモ ${n}`];
+  return [`更新 ${n}`];
+}
+function openCode() {
+  const w = game.world;
+  const dir = w.dir;
+  if (!dir.repo) { toast('まず Git の管理下に入ろう'); return; }
+  const ignored = (f) => f.startsWith('.') || /\.(log|env)$/.test(f) || f.includes('/');
+  const files = Object.keys(dir.files).filter((f) => !ignored(f)).sort();
+  const sug = game.mode === 'challenge' && game.ch && game.ch.mem.newFile;
+  const fresh = sug && dir.files[sug] === undefined ? sug : `feature${codeN + 1}.js`;
+  const chip = (f, cls, mark) => `<button type="button" class="chip ${cls}" data-file="${esc(f)}">${mark}${esc(f)}</button>`;
+  const html = `<div class="files code-files">${chip(fresh, 'untracked', `<i>${icon('pencil')}</i>`).replace('</button>', ' <small>新規</small></button>')}${files.map((f) => chip(f, '', '')).join('')}</div>`;
+  openModal(`${icon('pencil')} どこを書く？`, html, (box) => {
+    box.querySelectorAll('.chip').forEach((b) => (b.onclick = () => { closeModal(); writeCode(b.dataset.file); }));
+  });
+}
+function writeCode(file) {
+  const dir = game.world.dir;
+  const lines = codeLines(file, ++codeN);
+  const isNew = dir.files[file] === undefined;
+  const before = dir.files[file] || '';
+  dir.files[file] = before + (before && !before.endsWith('\n') ? '\n' : '') + lines.join('\n') + '\n';
+  termHtml(`<span class="t-cmd">${icon('pencil')} コードを書く: ${esc(file)}</span>`, 'cmdline');
+  const echo = out.lastElementChild;
+  termLine(`${file} ${isNew ? 'を新しく作りました' : 'を書き換えました'} (+${lines.length}行)`, 'ok');
+  lines.forEach((l) => termLine('+ ' + l, 'dim'));
+  game.lastCmd = `コードを書く: ${file}`;
+  afterCommand([{ type: 'file-write', path: file }], '', 0);
+  scrollTerm();
+  showBubble(echo, 0);
+}
+$('#btn-code').onclick = () => { if (!ghost()) openCode(); };
 
 // ---------- エディタ ----------
 let editing = null;
