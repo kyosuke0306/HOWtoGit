@@ -111,12 +111,31 @@ function animateFrom(container, before) {
 // refs: [{name, id, kind: 'branch'|'remote'|'tag'|'head', current}]
 // 画面に合わせた大きさ: 縦は行数、横は列数とラベル分から倍率を決める
 function fitDims(base, fit, rows, cols) {
-  const byH = (fit.h - base.pad * 2) / (Math.max(rows, 1) * base.row);
-  const byW = (fit.w * 0.42) / (base.pad * 2 + Math.max(cols - 1, 0) * base.col);
-  const k = Math.max(1, Math.min(byH, byW, 4));
-  // 文字は控えめに大きくする (ラベルがはみ出さないように)
-  const kt = Math.min(k, fit.w < 600 ? 1.45 : 1.8);
-  return { row: base.row * k, col: base.col * k, pad: base.pad * k, r: base.r * Math.min(k, 2.2), k: kt };
+  const byH = fit.h / (base.pad * 2 + Math.max(rows - 1, 0.6) * base.row);
+  const byW = (fit.w * 0.5) / (base.pad * 2 + Math.max(cols - 1, 0) * base.col);
+  const k = Math.max(1, Math.min(byH, byW, 6));
+  return { row: base.row * k, col: base.col * k, pad: base.pad * k, r: base.r * Math.min(k, 2.6), k: Math.min(k, 3) };
+}
+
+// 文字を右の余白いっぱいまで大きくする (はみ出すなら縮める)
+function fitText(container, avail, D) {
+  const inner = container.firstElementChild;
+  let need = 0;
+  for (const row of inner.querySelectorAll('.graph-row')) {
+    const last = row.lastElementChild;
+    if (last) need = Math.max(need, last.getBoundingClientRect().right - row.getBoundingClientRect().left + 14);
+  }
+  if (!need) return;
+  const max = Math.min(4, D.row / 30);
+  const k = Math.max(0.8, Math.min(max, D.k * (avail * 0.94) / need));
+  inner.style.setProperty('--gk', k.toFixed(3));
+  // 余った横幅は左右に分けて、図を真ん中に置く
+  const off = Math.max(0, (avail - need * k / D.k) / 2 - 8);
+  if (off > 0) {
+    const lines = inner.querySelector('.graph-lines'), rows = inner.querySelector('.graph-rows');
+    lines.style.left = `${off}px`;
+    rows.style.left = `${parseFloat(rows.style.left) + off}px`;
+  }
 }
 
 // opts: key, headId, compact, fit {w, h}, onPick(kind, value), empty
@@ -178,6 +197,7 @@ export function renderGraph(container, world, refs, opts = {}) {
     const b = e.target.closest('[data-pick]');
     if (b && opts.onPick) opts.onPick(b.dataset.pick, b.dataset.val);
   };
+  if (opts.fit) fitText(container, opts.fit.w - width - 2, D);
   animateFrom(container, before);
   prevIds.set(key, new Set(L.nodes.map((n) => n.id)));
 }

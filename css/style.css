@@ -592,7 +592,6 @@ body.cmd-open .fab-bar { bottom: 8px; }
 @media (max-width: 559px) {
   .goal-mini { left: 8px; right: 8px; width: auto; top: 62px; max-height: 24dvh; }
   .goal-mini.big { max-height: 62%; }
-  body.has-goal .main-graph { padding-top: calc(24dvh + 72px); }
 }
 /* 広い画面: ゴールは右、図はその左 */
 @media (min-width: 560px) { body.has-goal .main-graph { padding-right: calc(min(320px, 40%) + 16px); } }

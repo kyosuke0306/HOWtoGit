@@ -416,6 +416,18 @@ function graphFit(el) {
     h: el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom),
   };
 }
+// 上に重なる帯 (依頼・ゴール) の下から図を始める
+function fitTop(el) {
+  const top = el.getBoundingClientRect().top;
+  let bottom = 0;
+  for (const sel of ['.float-top', '#goal-box']) {
+    const b = $(sel);
+    if (!b || b.classList.contains('hidden') || !b.offsetHeight) continue;
+    if (sel === '#goal-box' && innerWidth >= 560) continue; // 広い画面ではゴールは右側
+    bottom = Math.max(bottom, b.getBoundingClientRect().bottom);
+  }
+  el.style.paddingTop = `${Math.max(8, Math.round(bottom - top + 8))}px`;
+}
 let fitTimer = null;
 function refit() {
   clearTimeout(fitTimer);
@@ -428,7 +440,21 @@ function renderBoard() {
   const w = game.world;
   const repo = w.repo;
   document.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('active', b.dataset.g === game.graphTab));
+  // ゴール
+  const box = $('#goal-box');
+  if (game.mode === 'stage' && game.stage) {
+    box.classList.remove('hidden');
+    document.body.classList.add('has-goal');
+    const gw = game.stage.goalWorld;
+    const grepo = gw.dirs[STAGE_DIR].repo;
+    const refs = localRefs(grepo).filter((r) => game.stage.def.remote || r.kind !== 'remote');
+    renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
+  } else {
+    box.classList.add('hidden');
+    document.body.classList.remove('has-goal');
+  }
   const el = $('#graph');
+  fitTop(el);
   const remoteUrl = (repo && repo.remotes.origin) || (w.remotes[TEAM_URL] && game.mode !== 'stage' ? TEAM_URL : null);
   $('[data-g="remote"]').classList.toggle('hidden', !remoteUrl);
   if (!remoteUrl) game.graphTab = 'local';
@@ -458,19 +484,6 @@ function renderBoard() {
     if (repo.stash.length) banner += `${banner ? '　' : ''}${icon('archive')} 退避 ${repo.stash.length}`;
   }
   $('#opbanner').innerHTML = banner ? `<div class="op">${banner}</div>` : '';
-  // ゴール
-  const box = $('#goal-box');
-  if (game.mode === 'stage' && game.stage) {
-    box.classList.remove('hidden');
-    document.body.classList.add('has-goal');
-    const gw = game.stage.goalWorld;
-    const grepo = gw.dirs[STAGE_DIR].repo;
-    const refs = localRefs(grepo).filter((r) => game.stage.def.remote || r.kind !== 'remote');
-    renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
-  } else {
-    box.classList.add('hidden');
-    document.body.classList.remove('has-goal');
-  }
 }
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
 $('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
