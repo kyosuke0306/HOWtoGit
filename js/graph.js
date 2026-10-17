@@ -109,10 +109,20 @@ function animateFrom(container, before) {
 }
 
 // refs: [{name, id, kind: 'branch'|'remote'|'tag'|'head', current}]
-// opts: key, headId, compact, onPick(kind, value), empty
+// 画面に合わせた大きさ: 縦は行数、横は列数とラベル分から倍率を決める
+function fitDims(base, fit, rows, cols) {
+  const byH = (fit.h - base.pad * 2) / (Math.max(rows, 1) * base.row);
+  const byW = (fit.w * 0.42) / (base.pad * 2 + Math.max(cols - 1, 0) * base.col);
+  const k = Math.max(1, Math.min(byH, byW, 4));
+  // 文字は控えめに大きくする (ラベルがはみ出さないように)
+  const kt = Math.min(k, fit.w < 600 ? 1.45 : 1.8);
+  return { row: base.row * k, col: base.col * k, pad: base.pad * k, r: base.r * Math.min(k, 2.2), k: kt };
+}
+
+// opts: key, headId, compact, fit {w, h}, onPick(kind, value), empty
 export function renderGraph(container, world, refs, opts = {}) {
   const key = opts.key || 'g';
-  const D = opts.compact ? DIMS.compact : DIMS.full;
+  let D = opts.compact ? DIMS.compact : DIMS.full;
   if (!refs.some((r) => r.id)) {
     container.innerHTML = `<div class="graph-empty">${opts.empty || 'まだコミットがありません'}</div>`;
     prevIds.set(key, new Set());
@@ -120,6 +130,7 @@ export function renderGraph(container, world, refs, opts = {}) {
   }
   const before = prevIds.has(key) ? measure(container) : new Map();
   const L = layout(world, refs);
+  if (opts.fit) D = fitDims(D, opts.fit, L.nodes.length, L.cols);
   const old = prevIds.get(key) || new Set();
   const width = D.pad * 2 + (L.cols - 1) * D.col;
   const height = D.pad * 2 + (L.nodes.length - 1) * D.row;
@@ -162,7 +173,7 @@ export function renderGraph(container, world, refs, opts = {}) {
       + (easy ? `<span class="cname">${esc(label)}</span>` : `<span class="hash">${c.id.slice(0, 7)}</span><span class="msg">${esc(label)}</span>`)
       + `</button>${pills}</div>`;
   }
-  container.innerHTML = `<div class="graph-inner${opts.compact ? ' compact' : ''}" style="height:${height}px"><div class="graph-lines" style="width:${width}px">${svg}</div><div class="graph-rows" style="left:${width + 2}px">${rows}</div></div>`;
+  container.innerHTML = `<div class="graph-inner${opts.compact ? ' compact' : ''}" style="height:${height}px;--gk:${(D.k || 1).toFixed(3)}"><div class="graph-lines" style="width:${width}px">${svg}</div><div class="graph-rows" style="left:${width + 2}px">${rows}</div></div>`;
   container.onclick = (e) => {
     const b = e.target.closest('[data-pick]');
     if (b && opts.onPick) opts.onPick(b.dataset.pick, b.dataset.val);

@@ -107,6 +107,7 @@ $('#req-chip').onclick = () => { if (!ghost()) toggleSheet('req-sheet'); };
 // コマンド欄 (ボタン / キーボード)
 function openConsole() {
   document.body.classList.add('cmd-open');
+  refit();
   closeSheet('req-sheet');
   if (save.pad === 'kb' && isTouch()) input.focus();
 }
@@ -116,6 +117,7 @@ const ghost = () => Date.now() < ghostUntil;
 function closeConsole() {
   ghostUntil = Date.now() + 450;
   document.body.classList.remove('cmd-open');
+  refit();
   input.blur();
 }
 $('#btn-cmd').onclick = () => (document.body.classList.contains('cmd-open') ? closeConsole() : openConsole());
@@ -406,7 +408,23 @@ function renderAll() {
   renderStats();
 }
 
+// ブランチ図に使える広さ (上の帯・下のボタン列のぶんを除く)
+function graphFit(el) {
+  const cs = getComputedStyle(el);
+  return {
+    w: el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight),
+    h: el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom),
+  };
+}
+let fitTimer = null;
+function refit() {
+  clearTimeout(fitTimer);
+  fitTimer = setTimeout(() => { if (game.world && document.body.dataset.screen === 'play') renderBoard(); }, 120);
+}
+window.addEventListener('resize', refit);
+
 function renderBoard() {
+  document.body.classList.toggle('has-goal', game.mode === 'stage' && !!game.stage);
   const w = game.world;
   const repo = w.repo;
   document.querySelectorAll('[data-g]').forEach((b) => b.classList.toggle('active', b.dataset.g === game.graphTab));
@@ -418,11 +436,11 @@ function renderBoard() {
     if (!repo) {
       el.innerHTML = `<div class="graph-empty">${icon('folder', 'big')}<br>まだ Git の管理外です<br><small>clone か init から</small></div>`;
     } else {
-      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
+      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
     }
   } else {
     const remote = w.remotes[remoteUrl];
-    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, empty: '空のリポジトリです' });
+    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), empty: '空のリポジトリです' });
     const prs = remote.prs.filter((p) => p.state === 'open');
     if (prs.length) el.insertAdjacentHTML('afterbegin', `<div class="pr-list">${prs.map((p) => `<span class="pr">${icon('pr')} #${p.number} ${esc(p.title)}</span>`).join('')}</div>`);
   }
