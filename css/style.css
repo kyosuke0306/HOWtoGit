@@ -616,3 +616,5 @@ body[data-screen="play"] .topbar { display: none; }
 .topbar #btn-docs { margin-left: auto; }
 /* 入力中はプロンプトを隠して入力欄を広く */
 .cmdline.typing .prompt { display: none; }
+/* 2本指の拡大縮小はアプリで扱う (ページ全体は拡大しない) */
+.main-graph { touch-action: pan-x pan-y; }
