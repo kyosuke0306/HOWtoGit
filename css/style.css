@@ -618,3 +618,8 @@ body[data-screen="play"] .topbar { display: none; }
 .cmdline.typing .prompt { display: none; }
 /* 2本指の拡大縮小はアプリで扱う (ページ全体は拡大しない) */
 .main-graph { touch-action: pan-x pan-y; }
+/* コードを書くボタン */
+.fab.hidden { display: none; }
+.code-fab { color: var(--warn); font-size: 13px; font-weight: 700; }
+.code-files { display: flex; flex-wrap: wrap; gap: 8px; }
+.code-files .chip { font-size: 15px; padding: 8px 14px; }

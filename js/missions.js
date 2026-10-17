@@ -66,11 +66,12 @@ export const MISSIONS = [
       m.name = api.pick(['access', 'news', 'coupon', 'recruit', 'faq', 'gallery']);
       m.branch = `feature/${m.name}`;
       m.file = `${m.name}.html`;
+      m.newFile = m.file; // 「コードを書く」で新規に出す候補
       m.mainStart = T(api) && T(api).repo.branches.main;
       m.story = `新しく「${m.name}」のページを作りたいな。みんなが使う main は壊さないように作業して、GitHub で見られるようにしておいて！`;
     },
     can: (api) => true,
-    hints: (m) => ['まずは main から作業ブランチを作ろう: git switch -c ' + m.branch, `ファイルを作る: echo "<h1>${m.name}</h1>" > ${m.file}`, 'git add → git commit -m "..."', `初回の push: git push -u origin ${m.branch}`],
+    hints: (m) => ['まずは main から作業ブランチを作ろう: git switch -c ' + m.branch, `「コード」ボタンで ${m.file} を書く`, 'git add → git commit -m "..."', `初回の push: git push -u origin ${m.branch}`],
     check(api, evs, m) {
       if (directOnMain(api, m)) return { fail: 'main に直接コミットしてしまった！新しい作業はブランチで' };
       const t = treeOfRemote(api, m.branch);
@@ -110,7 +111,7 @@ export const MISSIONS = [
       m.tc = api.teammatePush('main', { 'style.css': (treeOfRemote(api, 'main')['style.css'] || '') + `/* 調整 ${rnd(100)} */\n` }, 'スタイルを微調整', '田中');
       m.story = 'README.md のメンバー欄にあなたの名前を追加して、みんなに共有して！';
     },
-    hints: () => ['git switch main → README.md に追記 (echo "- 名前" >> README.md)', 'git commit -am "メンバーに追加" → git push', 'rejected になったら git pull してからもう一度 git push！'],
+    hints: () => ['git switch main →「コード」ボタンで README.md に追記', 'git commit -am "メンバーに追加" → git push', 'rejected になったら git pull してからもう一度 git push！'],
     check(api, evs, m) {
       const t = treeOfRemote(api, 'main');
       if (api.markers(t['README.md'])) return { fail: '競合マーカーが残ったまま push してしまった！' };
@@ -194,7 +195,7 @@ export const MISSIONS = [
       api.w.cwd = p;
       m.story = '本番の index.html に誤字「あいます」が！すぐ直して共有して。<br><b>やりかけの作業 (app.js) は消さないでね</b>';
     },
-    hints: () => ['作業中の変更は git stash で退避できます', 'git switch main → git pull で最新に', 'edit index.html で誤字を直して commit → push', 'git switch feature/discount → git stash pop で作業を戻す'],
+    hints: () => ['作業中の変更は git stash で退避できます', 'git switch main → git pull で最新に', '「コード」ボタンか edit で index.html を直して commit → push', 'git switch feature/discount → git stash pop で作業を戻す'],
     check(api, evs, m) {
       const t = treeOfRemote(api, 'main');
       if (Object.values(t).some((v) => v.includes(m.wip))) return { fail: '作業中のコードを main に push してしまった！' };
@@ -382,10 +383,11 @@ export const MISSIONS = [
     setup(api, m) {
       m.name = api.pick(['blog', 'event', 'shop-list', 'reserve', 'map']);
       m.branch = `feature/${m.name}`;
+      m.newFile = `${m.name}.html`;
       m.mainStart = T(api) && T(api).repo.branches.main;
       m.story = `「${m.name}」ページをお願い！本番に入れる前に<b>ちゃんとレビューを通して</b>ね。最後に手元の main も最新に。`;
     },
-    hints: (m) => [`git switch main → git switch -c ${m.branch}`, `echo "..." > ${m.name}.html → add → commit`, `git push -u origin ${m.branch}`, 'gh pr create --title "..." → gh pr merge <番号>', 'git switch main → git pull'],
+    hints: (m) => [`git switch main → git switch -c ${m.branch}`, `「コード」ボタンで ${m.name}.html を書く → add → commit`, `git push -u origin ${m.branch}`, 'gh pr create --title "..." → gh pr merge <番号>', 'git switch main → git pull'],
     check(api, evs, m) {
       if (directOnMain(api, m)) return { fail: 'main に直接コミットしてしまった！レビューを通すにはブランチで' };
       const merged = api.remote().prs.some((p) => p.head === m.branch && p.state === 'merged');
