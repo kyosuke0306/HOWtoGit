@@ -9,17 +9,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=78639e2c">
+  <link rel="stylesheet" href="css/style.css?v=4940d2bf">
   <script type="importmap">
   {
     "imports": {
-      "./js/app.js": "./js/app.js?v=15b2b00d",
+      "./js/app.js": "./js/app.js?v=0e4f41d8",
       "./js/builder.js": "./js/builder.js?v=b5fe97b5",
       "./js/diff.js": "./js/diff.js?v=8c59de29",
       "./js/docs.js": "./js/docs.js?v=b1914027",
       "./js/git.js": "./js/git.js?v=015be560",
       "./js/graph.js": "./js/graph.js?v=da7aa1f5",
-      "./js/icons.js": "./js/icons.js?v=8710faa1",
+      "./js/icons.js": "./js/icons.js?v=a82b37cb",
       "./js/keyboard.js": "./js/keyboard.js?v=f5a6d4e9",
       "./js/missions.js": "./js/missions.js?v=3f70ccc7",
       "./js/scenario.js": "./js/scenario.js?v=c473d604",
@@ -47,34 +47,47 @@
   <section class="screen-lessons" id="lessons"></section>
 
   <main class="play" id="play">
-    <section class="req" id="req"></section>
+    <section class="stage-area">
+      <div id="graph" class="graph main-graph"></div>
 
-    <section class="board">
-      <div class="board-main">
-        <div class="board-head">
-          <div class="tabs">
-            <button data-g="local" class="active"><svg class="i" aria-hidden="true"><use href="#i-monitor"/></svg><span>手元</span></button>
-            <button data-g="remote"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg><span>GitHub</span></button>
-          </div>
-          <button id="btn-files" class="btn small"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg><span>ファイル</span></button>
-        </div>
-        <div id="graph" class="graph"></div>
+      <div class="float-top">
+        <button type="button" id="req-chip" class="req-chip" aria-label="依頼を開く"></button>
         <div id="opbanner"></div>
       </div>
-      <div class="board-goal" id="goal-box">
-        <div class="board-head"><b><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg>ゴール</b></div>
+
+      <div class="goal-mini hidden" id="goal-box">
+        <button type="button" class="goal-head" id="goal-toggle"><svg class="i" aria-hidden="true"><use href="#i-flag"/></svg><b>ゴール</b><svg class="i" aria-hidden="true"><use href="#i-chevron"/></svg></button>
         <div id="goal" class="graph"></div>
       </div>
-      <div class="log-wrap">
-        <button type="button" class="log-toggle" id="log-toggle" aria-label="ログを広げる"><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg><span>ログ</span></button>
-        <div class="log" id="term-out" aria-live="polite"></div>
+
+      <button type="button" class="bubble hidden" id="bubble"></button>
+
+      <div class="fab-bar">
+        <div class="tabs view-tabs">
+          <button data-g="local" class="active" aria-label="手元"><svg class="i" aria-hidden="true"><use href="#i-monitor"/></svg></button>
+          <button data-g="remote" aria-label="GitHub"><svg class="i" aria-hidden="true"><use href="#i-cloud"/></svg></button>
+        </div>
+        <button id="btn-files" class="fab" aria-label="ファイル"><svg class="i" aria-hidden="true"><use href="#i-folder"/></svg></button>
+        <button id="btn-log" class="fab" aria-label="ログ"><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg></button>
+        <button id="btn-cmd" class="fab primary"><svg class="i" aria-hidden="true"><use href="#i-keyboard"/></svg><span>コマンド</span></button>
       </div>
+
+      <section class="sheet req-sheet" id="req-sheet" aria-label="依頼">
+        <button type="button" class="sheet-close" data-close="req-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
+        <div id="req"></div>
+      </section>
+
+      <section class="sheet log-sheet" id="log-sheet" aria-label="ログ">
+        <div class="sheet-bar"><b><svg class="i" aria-hidden="true"><use href="#i-terminal"/></svg>ログ</b><button type="button" class="sheet-close" data-close="log-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+        <div class="log" id="term-out" aria-live="polite"></div>
+      </section>
     </section>
 
     <section class="console" id="terminal">
       <div class="cmdline">
+        <button id="btn-cmd-close" class="icon-btn" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
         <span class="prompt" id="prompt"></span>
-        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="コマンド入力" placeholder="下のボタンで組み立てる">
+        <input id="cmd" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="コマンド入力" placeholder="下で組み立てる">
         <button id="btn-clear" class="icon-btn" aria-label="消す"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button>
         <button id="btn-pad" class="icon-btn" aria-label="キーボードに切替"><svg class="i" aria-hidden="true"><use href="#i-keyboard"/></svg></button>
         <button id="btn-enter" class="enter-btn" aria-label="実行"><svg class="i" aria-hidden="true"><use href="#i-play"/></svg></button>
@@ -113,6 +126,6 @@
   <div id="toasts" class="toasts"></div>
   <div id="confetti" class="confetti"></div>
 
-  <script type="module" src="js/app.js?v=15b2b00d"></script>
+  <script type="module" src="js/app.js?v=0e4f41d8"></script>
 </body>
 </html>

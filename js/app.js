@@ -91,12 +91,60 @@ function termHtml(html, cls = '') {
   out.appendChild(div);
 }
 function scrollTerm() { out.scrollTop = out.scrollHeight; }
-// ログの開閉 (スマホではブランチ図の下部に重ねて表示)
-function setLogOpen(open) {
-  document.body.classList.toggle('log-open', open);
-  $('#log-toggle').innerHTML = open ? `${icon('x')}<span>閉じる</span>` : `${icon('terminal')}<span>ログ</span>`;
+// ---------- 必要なときだけ出すパネル ----------
+// シート (依頼・ログ) は1枚ずつ。ブランチ図の上に重ねて表示する
+function openSheet(id) {
+  document.querySelectorAll('.sheet.open').forEach((el) => { if (el.id !== id) el.classList.remove('open'); });
+  $('#' + id).classList.add('open');
+  if (id === 'log-sheet') scrollTerm();
 }
-$('#log-toggle').onclick = () => { setLogOpen(!document.body.classList.contains('log-open')); scrollTerm(); };
+function closeSheet(id) { $('#' + id).classList.remove('open'); }
+function toggleSheet(id) { $('#' + id).classList.contains('open') ? closeSheet(id) : openSheet(id); }
+document.querySelectorAll('[data-close]').forEach((b) => (b.onclick = () => closeSheet(b.dataset.close)));
+$('#btn-log').onclick = () => { if (!ghost()) toggleSheet('log-sheet'); };
+$('#req-chip').onclick = () => { if (!ghost()) toggleSheet('req-sheet'); };
+
+// コマンド欄 (ボタン / キーボード)
+function openConsole() {
+  document.body.classList.add('cmd-open');
+  closeSheet('req-sheet');
+  if (save.pad === 'kb' && isTouch()) input.focus();
+}
+// 閉じた直後のタップが下の要素に落ちないようにする
+let ghostUntil = 0;
+const ghost = () => Date.now() < ghostUntil;
+function closeConsole() {
+  ghostUntil = Date.now() + 450;
+  document.body.classList.remove('cmd-open');
+  input.blur();
+}
+$('#btn-cmd').onclick = () => (document.body.classList.contains('cmd-open') ? closeConsole() : openConsole());
+$('#btn-cmd-close').addEventListener('pointerdown', (e) => e.preventDefault());
+$('#btn-cmd-close').onclick = closeConsole;
+
+// 実行結果を小さく表示 (タップで全部)
+let bubbleTimer = null;
+function showBubble(echo, errors) {
+  const lines = [];
+  for (let el = echo.nextElementSibling; el; el = el.nextElementSibling) {
+    const t = el.textContent.trim();
+    if (t) lines.push(t);
+  }
+  const b = $('#bubble');
+  const head = `<code>${esc(game.lastCmd)}</code>`;
+  const body = lines.length ? lines.slice(0, 3).map((l) => `<span>${esc(l)}</span>`).join('') : '<span class="muted">(表示なし)</span>';
+  b.innerHTML = head + body + (lines.length > 3 ? `<span class="more">続きを見る ${icon('chevron')}</span>` : '');
+  b.classList.toggle('err', errors > 0);
+  b.classList.remove('hidden');
+  b.onclick = () => {
+    if (ghost()) return;
+    b.classList.add('hidden');
+    openSheet('log-sheet');
+    requestAnimationFrame(() => { out.scrollTop = echo.offsetTop - out.offsetTop - 4; });
+  };
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => b.classList.add('hidden'), lines.length > 3 || errors ? 9000 : 4500);
+}
 
 function promptHtml() {
   const p = game.shell.prompt();
@@ -123,15 +171,9 @@ function runCommand(line) {
   game.lastCmd = line;
   explainFirstTime(line);
   afterCommand(events, line, ctx.errorCount);
-  // 出力が長いときはログを広げ、そのコマンドの先頭から読めるようにする
-  let lines = 0;
-  for (let el = echo.nextElementSibling; el; el = el.nextElementSibling) lines++;
-  if (lines > 3 && isMobileLayout()) {
-    setLogOpen(true);
-    requestAnimationFrame(() => { out.scrollTop = echo.offsetTop - out.offsetTop - 4; });
-  } else scrollTerm();
+  scrollTerm();
+  showBubble(echo, ctx.errorCount);
 }
-const isMobileLayout = () => matchMedia('(max-width: 959px)').matches;
 
 function explainFirstTime(line) {
   const m = line.trim().match(/^(git|gh)\s*([\w-]*)/);
@@ -236,6 +278,7 @@ function setPad(p) {
   document.body.dataset.pad = p;
   $('#btn-pad').classList.toggle('on', p === 'kb');
   $('#btn-pad').setAttribute('aria-label', p === 'kb' ? 'ボタンに切替' : 'キーボードに切替');
+  if (p === 'kb') openConsole();
   if (p === 'kb' && isTouch()) { input.setAttribute('inputmode', 'none'); input.focus(); }
   else if (isTouch()) input.blur();
 }
@@ -263,7 +306,7 @@ createKeyboard($('#kb'), {
     else if (k === 'DOWN') histMove(1);
     else if (k === 'PASTE') pasteClip();
     else if (k === 'OSKB') useOsKeyboard();
-    else if (k === 'HIDE') setPad('build');
+    else if (k === 'HIDE') closeConsole();
   },
 });
 function useOsKeyboard() {
@@ -412,6 +455,7 @@ function renderBoard() {
   }
 }
 document.querySelectorAll('[data-g]').forEach((b) => (b.onclick = () => { game.graphTab = b.dataset.g; renderBoard(); }));
+$('#goal-toggle').onclick = () => $('#goal-box').classList.toggle('big');
 
 function renderStats() {
   const L = levelInfo(save.xp);
@@ -433,6 +477,7 @@ function renderReq() {
   else if (game.mode === 'challenge') renderChallengeCard();
   else if (game.mode === 'free') renderFreeCard();
 }
+function setChip(html) { $('#req-chip').innerHTML = html + `<span class="chip-open">${icon('chevron-down')}</span>`; }
 
 // ---------- ステージ ----------
 function startStage(idx) {
@@ -445,6 +490,8 @@ function startStage(idx) {
   termHtml(`<div class="banner">${icon('flag')} ${idx + 1}. ${esc(def.title)}</div>`);
   setScreen('play', `ステージ ${idx + 1}`);
   renderAll();
+  closeConsole();
+  openSheet('req-sheet');
 }
 function checkStage(line, errors) {
   const g = game.stage;
@@ -478,6 +525,7 @@ function starHtml(n) {
 function renderStageCard() {
   const g = game.stage;
   const d = g.def;
+  setChip(`<span class="badge">${g.idx + 1}</span><span class="chip-text">${esc(d.goal)}</span><span class="moves">${g.used}<small>/${d.par}</small></span>`);
   $('#req').innerHTML = `
     <div class="req-head">
       <span class="badge">${g.idx + 1}/${STAGES.length}</span>
@@ -532,10 +580,12 @@ function beginMission(def) {
   termHtml(`<div class="banner mission-banner">${icon('mail')} 依頼 ${c.n}: ${esc(def.title)}</div>`);
   if (def !== FIRST_MISSION && navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* 無視 */ }
   renderAll();
-  const card = $('#req');
-  card.classList.remove('arrive');
-  void card.offsetWidth;
-  card.classList.add('arrive');
+  closeConsole();
+  openSheet('req-sheet');
+  const chip = $('#req-chip');
+  chip.classList.remove('arrive');
+  void chip.offsetWidth;
+  chip.classList.add('arrive');
 }
 
 function pickNextMission() {
@@ -634,6 +684,7 @@ function renderChallengeCard() {
   const hints = (typeof m.hints === 'function' ? m.hints(c.mem) : m.hints) || [];
   const shown = hints.slice(0, c.hints).map((h) => `<li>${esc(h)}</li>`).join('');
   const hp = Math.max(0, c.hearts);
+  setChip(`<span class="badge challenge">${c.n}</span><span class="chip-text">${esc(m.title)}</span><span class="stats-inline"><span class="hearts">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span><span class="score">${c.score}</span></span>`);
   $('#req').innerHTML = `
     <div class="req-head">
       <span class="badge challenge">依頼 ${c.n}</span>
@@ -664,8 +715,10 @@ function startFree() {
   termLine(`git clone ${TEAM_URL}`, 'dim');
   setScreen('play', 'フリー');
   renderAll();
+  closeConsole();
 }
 function renderFreeCard() {
+  setChip(`<span class="badge free">${icon('flask')}</span><span class="chip-text">フリー: 仲間を動かす</span>`);
   $('#req').innerHTML = `
     <div class="req-head"><span class="badge free">フリー</span><h2>仲間を動かす</h2>
       <button class="btn icon" data-act="reset" title="最初から" aria-label="最初から">${icon('restart')}</button></div>
@@ -855,7 +908,7 @@ function teamToast(who, text) {
   toast(`${avatar(who, 22)}<span><b>${esc(who)}</b> ${esc(text)}</span>`);
 }
 function shake() {
-  const el = $('#req');
+  const el = $('#req-chip');
   el.classList.remove('shake');
   void el.offsetWidth;
   el.classList.add('shake');
