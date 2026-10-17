@@ -601,28 +601,46 @@ function renderChat() {
   box.scrollTop = box.scrollHeight;
 }
 function openAsk() {
-  const s = loadSettings();
-  $('#ask-setup').classList.toggle('hidden', !!s.key);
-  $('#ask-key').value = s.key;
-  $('#ask-model').value = s.model || DEFAULT_MODEL;
+  const has = !!loadSettings().key;
+  $('#ask-nokey').classList.toggle('hidden', has);
+  $('#ask-form').classList.toggle('hidden', !has);
+  $('#ask-msgs').classList.toggle('hidden', !has);
   renderChat();
   openSheet('ask-sheet');
-  if (s.key && !isTouch()) $('#ask-input').focus();
+  if (has && !isTouch()) $('#ask-input').focus();
 }
 $('#btn-ask').onclick = () => { if (!ghost()) ($('#ask-sheet').classList.contains('open') ? closeSheet('ask-sheet') : openAsk()); };
-$('#ask-gear').onclick = () => $('#ask-setup').classList.toggle('hidden');
-$('#ask-setup').onsubmit = (e) => {
-  e.preventDefault();
-  saveSettings({ key: $('#ask-key').value.trim(), model: $('#ask-model').value.trim() || DEFAULT_MODEL });
-  $('#ask-setup').classList.toggle('hidden', !!loadSettings().key);
-  toast(`${icon('check')} 保存しました`);
-};
-$('#ask-key-clear').onclick = () => { saveSettings({ ...loadSettings(), key: '' }); $('#ask-key').value = ''; toast('キーを消しました'); };
+$('#ask-go-home').onclick = () => { closeSheet('ask-sheet'); go('#/'); };
+// API キーの設定 (トップ画面からだけ開く)
+function openAskSettings() {
+  const s = loadSettings();
+  openModal(`${icon('key')} 質問 (Gemini) の設定`, `<form class="ask-setup" id="ask-setup">
+      <p>Gemini の API キーを入れると、プレイ中に質問できます。キーはこの端末にだけ保存されます。</p>
+      <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">API キーを取得 (Google AI Studio)</a>
+      <label>API キー<input id="ask-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza..." value="${esc(s.key)}"></label>
+      <label>モデル<input id="ask-model" type="text" autocomplete="off" spellcheck="false" value="${esc(s.model || DEFAULT_MODEL)}"></label>
+      <div class="ask-setup-btns"><button type="button" class="btn ghost small" id="ask-key-clear">キーを消す</button><button type="submit" class="btn primary small">保存</button></div>
+    </form>`, (box) => {
+    box.querySelector('#ask-setup').onsubmit = (e) => {
+      e.preventDefault();
+      saveSettings({ key: box.querySelector('#ask-key').value.trim(), model: box.querySelector('#ask-model').value.trim() || DEFAULT_MODEL });
+      closeModal();
+      toast(`${icon('check')} 保存しました`);
+      renderHome();
+    };
+    box.querySelector('#ask-key-clear').onclick = () => {
+      saveSettings({ ...loadSettings(), key: '' });
+      closeModal();
+      toast('キーを消しました');
+      renderHome();
+    };
+  });
+}
 $('#ask-form').onsubmit = async (e) => {
   e.preventDefault();
   const q = $('#ask-input').value.trim();
   if (!q || asking) return;
-  if (!loadSettings().key) { $('#ask-setup').classList.remove('hidden'); return; }
+  if (!loadSettings().key) { openAsk(); return; }
   $('#ask-input').value = '';
   chat.push({ role: 'user', text: q });
   asking = true;
@@ -1213,7 +1231,9 @@ function renderHome() {
         <span class="mode-body"><b>フリー</b><small>自由に試す</small></span>
         <span class="mode-meta">${icon('chevron')}</span>
       </a>
-    </div>`;
+    </div>
+    <button type="button" class="home-setting" id="home-ask">${icon('chat')}<span>質問 (Gemini)</span><small>${loadSettings().key ? '設定済み' : '未設定'}</small>${icon('chevron')}</button>`;
+  $('#home-ask').onclick = openAskSettings;
 }
 
 function renderStageSelect() {

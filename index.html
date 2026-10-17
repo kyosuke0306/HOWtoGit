@@ -9,11 +9,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=4a7d0cb0">
+  <link rel="stylesheet" href="css/style.css?v=e76e121e">
   <script type="importmap">
   {
     "imports": {
-      "./js/app.js": "./js/app.js?v=00d711e0",
+      "./js/app.js": "./js/app.js?v=9dc08bfc",
       "./js/ask.js": "./js/ask.js?v=49cde69e",
       "./js/builder.js": "./js/builder.js?v=b5fe97b5",
       "./js/diff.js": "./js/diff.js?v=8c59de29",
@@ -82,14 +82,8 @@
       </section>
 
       <section class="sheet ask-sheet" id="ask-sheet" aria-label="質問">
-        <div class="sheet-bar"><b><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>質問 <small>Gemini</small></b><span class="ask-tools"><button type="button" class="sheet-close" id="ask-gear" aria-label="API キーの設定"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg></button><button type="button" class="sheet-close" data-close="ask-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></span></div>
-        <form class="ask-setup hidden" id="ask-setup">
-          <p>Gemini の API キーを入れると、いまの画面について質問できます。キーはこの端末にだけ保存されます。</p>
-          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">API キーを取得 (Google AI Studio)</a>
-          <label>API キー<input id="ask-key" type="password" autocomplete="off" spellcheck="false" placeholder="AIza..."></label>
-          <label>モデル<input id="ask-model" type="text" autocomplete="off" spellcheck="false"></label>
-          <div class="ask-setup-btns"><button type="button" class="btn ghost small" id="ask-key-clear">キーを消す</button><button type="submit" class="btn primary small">保存</button></div>
-        </form>
+        <div class="sheet-bar"><b><svg class="i" aria-hidden="true"><use href="#i-chat"/></svg>質問 <small>Gemini</small></b><button type="button" class="sheet-close" data-close="ask-sheet" aria-label="閉じる"><svg class="i" aria-hidden="true"><use href="#i-x"/></svg></button></div>
+        <div class="ask-nokey hidden" id="ask-nokey"><p>API キーが未設定です。トップ画面で設定してください。</p><button type="button" class="btn small" id="ask-go-home">トップへ</button></div>
         <div class="ask-msgs" id="ask-msgs"></div>
         <form class="ask-form" id="ask-form">
           <textarea id="ask-input" rows="1" placeholder="Git について質問" enterkeyhint="send"></textarea>
@@ -146,6 +140,6 @@
   <div id="toasts" class="toasts"></div>
   <div id="confetti" class="confetti"></div>
 
-  <script type="module" src="js/app.js?v=00d711e0"></script>
+  <script type="module" src="js/app.js?v=9dc08bfc"></script>
 </body>
 </html>
