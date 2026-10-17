@@ -16,13 +16,12 @@ injectSprite();
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-const TITLES = ['Git見習い', 'コミッター', 'ブランチ使い', 'マージ職人', 'コンフリクト解決人', 'リベース名人', 'チームの要', 'Git仙人'];
 const SAVE_KEY = 'howtogit-save-v1';
 
 // ---------- セーブデータ ----------
 const save = loadSave();
 function loadSave() {
-  const d = { xp: 0, stars: {}, best: 0, seen: {}, pad: 'build' };
+  const d = { stars: {}, best: 0, seen: {}, pad: 'build' };
   try {
     const s = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (s) return { ...d, ...s, stars: s.stars || {} };
@@ -31,11 +30,6 @@ function loadSave() {
 }
 function persist() {
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* 無視 */ }
-}
-function levelInfo(xp) {
-  let lv = 1, need = 100, rest = xp;
-  while (rest >= need) { rest -= need; lv++; need = 100 + (lv - 1) * 50; }
-  return { lv, rest, need, title: TITLES[Math.min(TITLES.length - 1, lv - 1)] };
 }
 
 // ---------- ゲーム状態 ----------
@@ -270,8 +264,18 @@ $('#btn-enter').onclick = submitInput;
 $('#btn-clear').addEventListener('pointerdown', (e) => { if (document.activeElement === input) e.preventDefault(); });
 $('#btn-clear').onclick = () => { input.value = ''; selCmd = null; updateDesc(); renderBuilder(); };
 
+// 入力中はプロンプトを隠して入力欄を広く使い、カーソル位置が見えるように横スクロールする
+function keepCaret() {
+  input.parentElement.classList.toggle('typing', !!input.value);
+  requestAnimationFrame(() => {
+    const len = input.value.length, pos = input.selectionStart ?? len;
+    if (pos >= len) input.scrollLeft = input.scrollWidth;
+    else input.scrollLeft = Math.max(0, input.scrollWidth * (pos / len) - input.clientWidth / 2);
+  });
+}
 // 入力中のコマンドの説明
 function updateDesc() {
+  keepCaret();
   const c = cmdOf(input.value);
   const d = c && (DESC[c] || (FIRST_TIME[c] || '').replace(/^\S+ = /, ''));
   $('#cmd-desc').innerHTML = d ? `<b>${esc(c)}</b> ${esc(d)}` : '';
@@ -307,8 +311,8 @@ createKeyboard($('#kb'), {
       if (e0 > pos) insertText('');
       else if (pos > 0) { input.value = input.value.slice(0, pos - 1) + input.value.slice(pos); input.setSelectionRange(pos - 1, pos - 1); updateDesc(); }
     } else if (k === 'TAB') tabComplete();
-    else if (k === 'LEFT') input.setSelectionRange(Math.max(0, pos - 1), Math.max(0, pos - 1));
-    else if (k === 'RIGHT') input.setSelectionRange(pos + 1, pos + 1);
+    else if (k === 'LEFT') { input.setSelectionRange(Math.max(0, pos - 1), Math.max(0, pos - 1)); keepCaret(); }
+    else if (k === 'RIGHT') { input.setSelectionRange(pos + 1, pos + 1); keepCaret(); }
     else if (k === 'UP') histMove(-1);
     else if (k === 'DOWN') histMove(1);
     else if (k === 'PASTE') pasteClip();
@@ -410,7 +414,6 @@ function renderAll() {
   renderBoard();
   renderBuilder();
   updateDesc();
-  renderStats();
 }
 
 // ブランチ図に使える広さ (上の帯・下のボタン列のぶんを除く)
@@ -502,20 +505,6 @@ function showGoal(on) {
 }
 $('#btn-goal').onclick = () => { goalWithReq = false; if (!ghost()) showGoal(!$('#goal-box').classList.contains('show')); };
 
-function renderStats() {
-  const L = levelInfo(save.xp);
-  $('#lv').textContent = L.lv;
-  $('#xpfill').style.width = `${(L.rest / L.need) * 100}%`;
-  $('.level').title = `${L.title} ${L.rest}/${L.need} XP`;
-}
-function gainXp(n) {
-  const before = levelInfo(save.xp).lv;
-  save.xp += n;
-  persist();
-  const after = levelInfo(save.xp);
-  if (after.lv > before) toast(`${icon('arrow-up')} Lv${after.lv} ${after.title}`);
-}
-
 // 上部のカード (ステージ / 依頼 / フリー)
 function renderReq() {
   if (game.mode === 'stage') renderStageCard();
@@ -555,7 +544,6 @@ function finishStage() {
   const prev = save.stars[g.def.id] || 0;
   if (st > prev) save.stars[g.def.id] = st;
   persist();
-  gainXp(prev ? 5 : 20 + st * 10);
   confetti();
   const next = g.idx + 1 < STAGES.length;
   setTimeout(() => showResult({
@@ -674,7 +662,6 @@ function missionSuccess() {
   const bonus = c.mem.bonus || 0;
   const pts = Math.round(m.points * hintRate * streakRate) + bonus;
   c.score += pts;
-  gainXp(Math.round(pts / 3));
   if (c.score > save.best) { save.best = c.score; persist(); }
   termHtml(`<div class="banner success">${icon('check-circle')} 成功！ +${pts}</div>`);
   confetti();
@@ -980,7 +967,6 @@ function setScreen(name, title = '') {
   document.body.dataset.screen = name;
   $('#screen-title').textContent = title;
   closeModal();
-  renderStats();
 }
 function go(hash) {
   if (location.hash === hash) route();
@@ -1021,7 +1007,6 @@ function totalStars() { return STAGES.reduce((a, s) => a + (save.stars[s.id] || 
 function renderHome() {
   setScreen('home');
   const done = STAGES.filter((s) => save.stars[s.id]).length;
-  const L = levelInfo(save.xp);
   const playing = game.mode === 'challenge' && game.ch && game.ch.state === 'playing' && game.ch.n > 1;
   $('#home').innerHTML = `
     <div class="home-hero">
@@ -1046,10 +1031,6 @@ function renderHome() {
         <span class="mode-body"><b>フリー</b><small>自由に試す</small></span>
         <span class="mode-meta">${icon('chevron')}</span>
       </a>
-    </div>
-    <div class="home-level">
-      <span>Lv<b>${L.lv}</b> ${esc(L.title)}</span>
-      <span class="xpbar"><i style="width:${(L.rest / L.need) * 100}%"></i></span>
     </div>`;
 }
 
