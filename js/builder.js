@@ -131,7 +131,7 @@ export function chipsFor(cmd, world, line, extra = {}) {
       if (has('--delete')) remoteRefs.filter((r) => r.startsWith('origin/')).map((r) => r.slice(7)).filter((b) => b !== 'main').forEach((b) => add(b, b, 'branch'));
       add('--force (上書き)', '--force', 'danger');
       break;
-    case 'tag': add('v1', 'v1', 'new'); commitChips(world, repo).forEach((c) => add(c.label, c.add, 'commit')); break;
+    case 'tag': tagNames(world, repo).forEach((t) => add(t, t, 'new')); commitChips(world, repo).forEach((c) => add(c.label, c.add, 'commit')); break;
     case 'diff': add('--staged', '--staged', 'flag'); branches.filter((b) => b !== cur).forEach((b) => add(b, b, 'branch')); remoteRefs.forEach((r) => add(r, r, 'remote')); break;
     case 'gh': {
       const url = repo.remotes.origin;
@@ -157,4 +157,18 @@ export function opChips(world) {
     chips.push({ label: `git ${t} --abort (中止)`, line: `git ${t} --abort` });
   }
   return chips;
+}
+
+// タグ名の候補: ステージは v1。それ以外は今ある最新の版の「次」を2通り (例: v1.0 → v1.1 / v2.0)
+function tagNames(world, repo) {
+  if (world.easy) return repo.tags.v1 ? [] : ['v1'];
+  const r = world.remotes[repo.remotes.origin];
+  const all = [...Object.keys(repo.tags), ...Object.keys((r && r.tags) || {})];
+  let best = null;
+  for (const t of all) {
+    const m = t.match(/^v(\d+)\.(\d+)$/);
+    if (m && (!best || +m[1] > best[0] || (+m[1] === best[0] && +m[2] > best[1]))) best = [+m[1], +m[2]];
+  }
+  const names = best ? [`v${best[0]}.${best[1] + 1}`, `v${best[0] + 1}.0`] : ['v1.0'];
+  return names.filter((n) => !all.includes(n));
 }
