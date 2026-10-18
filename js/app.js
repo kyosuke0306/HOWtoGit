@@ -934,7 +934,7 @@ function renderChallengeCard() {
     <div class="req-actions">
       ${c.state === 'over' ? `<button class="btn primary" id="btn-retry">${icon('restart')} もう一度</button>`
         : c.result ? `<button class="btn primary" id="btn-next">次の依頼 ${icon('play')}</button>`
-        : `<button class="btn" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント ${c.hints}/${hints.length}</button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
+        : `<button class="btn hint-cost" id="btn-hint" ${c.hints >= hints.length ? 'disabled' : ''}>${icon('bulb')}ヒント${c.hints >= hints.length ? '' : ` <small>${icon('heart')}-1</small>`}</button><button class="btn ghost" id="btn-skip">あきらめる</button>`}
     </div>`;
   $('#req').querySelectorAll('.story p, .hints li').forEach(addCopyButtons);
   if ($('#btn-hint')) $('#btn-hint').onclick = showHint;
@@ -1060,11 +1060,19 @@ function showHint() {
     game.stage.hint = true;
     renderReq();
   } else if (game.mode === 'challenge' && game.ch && !game.ch.result) {
-    const c = game.ch;
-    const hints = (typeof c.mission.hints === 'function' ? c.mission.hints(c.mem) : c.mission.hints) || [];
-    if (c.hints < hints.length) c.hints++;
-    renderReq();
+    showChallengeHint();
   }
+}
+// チーム開発: ライフ1つで、その依頼のヒントを全部見られる
+async function showChallengeHint() {
+  const c = game.ch;
+  const hints = (typeof c.mission.hints === 'function' ? c.mission.hints(c.mem) : c.mission.hints) || [];
+  if (c.hints >= hints.length) return;
+  if (c.hearts <= 1) { toast('ライフが残り1つなのでヒントは見られません'); return; }
+  if (!(await gameConfirm({ icon: 'bulb', title: 'ヒントを見る？', text: 'この依頼のヒントを全部見られます。', yes: '見る', no: 'やめる', cost: 1, tone: 'warn' }))) return;
+  c.hearts--;
+  c.hints = hints.length;
+  renderAll();
 }
 
 // ---------- ファイル (シート) ----------
