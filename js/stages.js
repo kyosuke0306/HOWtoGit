@@ -193,6 +193,37 @@ export const STAGES = [
     solution: ['git switch -c feature', 'git commit', 'git switch main', 'git merge feature', 'git push'],
     hint: 'switch -c feature → commit → switch main → merge feature → push',
   },
+  // ---- 5. プルリクエスト ----
+  {
+    id: 's-pr-create', ch: 5, title: 'PR を出す', pr: true,
+    goal: 'feature を GitHub に送って、プルリクエストを作ろう',
+    intro: 'プルリクエスト (PR) は「このブランチを main に入れていい？」という申請。仲間がレビューして OK なら GitHub 上でマージする。いきなり main を変えないための仕組み。',
+    learn: 'プルリクエスト (PR) = 「このブランチを main に入れていい？」と仲間に頼む申請。push したブランチから作る。',
+    remote: true,
+    setup: (w, run) => { run(C(1)); withRemote(w, run); run('git switch -c feature && git commit'); },
+    solution: ['git push -u origin feature', 'gh pr create'],
+    hint: 'git push -u origin feature → gh pr create',
+  },
+  {
+    id: 's-pr-update', ch: 5, title: 'PR を直す', pr: true,
+    goal: 'レビューで「もう1つ直して」と言われた。直して PR を更新しよう',
+    intro: 'PR は作り直さなくていい。PR は feature ブランチを見ているので、ブランチを進めれば PR も進む。',
+    learn: 'PR はブランチを見ている。同じブランチにコミットして push すれば、PR の中身も更新される。',
+    remote: true,
+    setup: (w, run) => { run(C(1)); withRemote(w, run); run('git switch -c feature && git commit && git push -u origin feature && gh pr create'); },
+    solution: ['git commit', 'git push'],
+    hint: 'git commit → git push (PR は作り直さなくていい)',
+  },
+  {
+    id: 's-pr-merge', ch: 5, title: 'PR をマージ', pr: true,
+    goal: 'OK が出た PR をマージして、手元の main も最新にしよう',
+    intro: 'PR のマージは GitHub 上で起きる。手元の main はそのままなので、あとで取り込む。',
+    learn: 'レビューで OK が出たら GitHub 上でマージ。手元の main は pull で追いつく。',
+    remote: true,
+    setup: (w, run) => { run(C(1)); withRemote(w, run); run('git switch -c feature && git commit && git push -u origin feature && gh pr create'); },
+    solution: ['gh pr merge 1', 'git switch main', 'git pull'],
+    hint: 'gh pr merge 1 → git switch main → git pull',
+  },
 ];
 
 STAGES.forEach((s) => { s.par = s.solution.filter((c) => !c.startsWith('__')).length; });
@@ -221,7 +252,13 @@ export function buildStage(stage, { solved = false } = {}) {
 
 export function stageShape(w, stage) {
   const d = w.dirs[STAGE_DIR];
-  return d && d.repo ? repoShape(w, d.repo, { remote: !!stage.remote }) : '';
+  if (!d || !d.repo) return '';
+  const shape = repoShape(w, d.repo, { remote: !!stage.remote });
+  if (!stage.pr) return shape;
+  // PR の状態も形の一部にする
+  const r = w.remotes[d.repo.remotes.origin];
+  const prs = r ? r.prs.map((p) => `${p.head}>${p.base}:${p.state}`).sort().join(',') : '';
+  return `${shape}|pr:${prs}`;
 }
 
 export function stars(stage, used) {

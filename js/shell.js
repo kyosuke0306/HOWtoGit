@@ -333,7 +333,7 @@ export class Shell {
       const pr = findPr(remote, pos[0], repo);
       if (!pr) { ctx.out('no pull requests found', 'err'); return; }
       if (pr.state !== 'open') { ctx.out(`Pull request #${pr.number} was already merged`, 'warn'); return; }
-      const r = mergeOnRemote(w, remote, pr.base, pr.head, `Merge pull request #${pr.number} from ${pr.head}\n\n${pr.title}`, w.user.name);
+      const r = mergeOnRemote(w, remote, pr.base, pr.head, w.easy ? `C${w.easyN + 1}` : `Merge pull request #${pr.number} from ${pr.head}\n\n${pr.title}`, w.user.name);
       if (!r.ok) {
         if (r.reason === 'conflict') {
           ctx.out(`X Pull request #${pr.number} is not mergeable: the merge commit cannot be cleanly created.`, 'err');
