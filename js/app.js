@@ -431,7 +431,6 @@ function graphFit(el) {
 }
 // 上に重なる帯 (依頼・ゴール) の下から図を始める
 function fitTop(el) {
-  const top = el.getBoundingClientRect().top;
   let bottom = 0;
   for (const sel of ['.float-top', '#goal-box']) {
     const b = $(sel);
@@ -439,7 +438,10 @@ function fitTop(el) {
     if (sel === '#goal-box' && innerWidth >= 560) continue; // 広い画面ではゴールは右側
     bottom = Math.max(bottom, b.getBoundingClientRect().bottom);
   }
-  el.style.paddingTop = `${Math.max(8, Math.round(bottom - top + 8))}px`;
+  // 図の枠そのものを帯の下から始める (スクロールしても帯の下に潜らない)
+  const area = el.parentElement.getBoundingClientRect().top;
+  el.style.top = `${Math.max(0, Math.round(bottom - area + 6))}px`;
+  el.style.paddingTop = '8px';
 }
 let fitTimer = null;
 function refit() {
@@ -447,6 +449,8 @@ function refit() {
   fitTimer = setTimeout(() => { if (game.world && document.body.dataset.screen === 'play') renderBoard(); }, 120);
 }
 window.addEventListener('resize', refit);
+// ページ全体は動かさない (スマホでスクロールしても上下のボタンが消えないように)
+window.addEventListener('scroll', () => { if (window.scrollX || window.scrollY) window.scrollTo(0, 0); });
 
 function renderBoard() {
   document.body.classList.toggle('has-goal', game.mode === 'stage' && !!game.stage);
