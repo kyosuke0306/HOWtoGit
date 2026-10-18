@@ -50,6 +50,7 @@ const api = createApi(game);
 
 function setWorld(w) {
   game.world = w;
+  $('#bubble').classList.add('hidden');
   setZoom(1, true);
   game.shell = new Shell(w, {
     openEditor: (f) => openEditor(f),
@@ -462,30 +463,22 @@ function renderBoard() {
     const grepo = gw.dirs[STAGE_DIR].repo;
     const refs = localRefs(grepo).filter((r) => game.stage.def.remote || r.kind !== 'remote');
     renderGraph($('#goal'), gw, refs, { key: 'goal:' + game.stage.def.id, headId: headId(grepo), compact: true });
+    if (game.stage.def.pr) {
+      const gr = gw.remotes[grepo.remotes.origin];
+      const label = { open: 'マージ待ち', merged: 'マージ済み' };
+      $('#goal').insertAdjacentHTML('beforeend', gr.prs.map((p) => `<div class="goal-pr">${icon('pr')} PR #${p.number} ${esc(p.head)} → ${esc(p.base)} <small>${label[p.state] || p.state}</small></div>`).join(''));
+    }
   } else {
     box.classList.add('hidden');
     $('#btn-goal').classList.add('hidden');
     document.body.classList.remove('has-goal');
   }
   const el = $('#graph');
-  fitTop(el);
   const remoteUrl = (repo && repo.remotes.origin) || (w.remotes[TEAM_URL] && game.mode !== 'stage' ? TEAM_URL : null);
   $('[data-g="remote"]').classList.toggle('hidden', !remoteUrl);
   $('#btn-code').classList.toggle('hidden', game.mode === 'stage' || !repo);
   $('#btn-help').classList.toggle('hidden', game.mode === 'stage');
   if (!remoteUrl) game.graphTab = 'local';
-  if (game.graphTab === 'local') {
-    if (!repo) {
-      el.innerHTML = `<div class="graph-empty">${icon('folder', 'big')}<br>まだ Git の管理外です<br><small>clone か init から</small></div>`;
-    } else {
-      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
-    }
-  } else {
-    const remote = w.remotes[remoteUrl];
-    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: '空のリポジトリです' });
-    const prs = remote.prs.filter((p) => p.state === 'open');
-    if (prs.length) el.insertAdjacentHTML('afterbegin', `<div class="pr-list">${prs.map((p) => `<span class="pr">${icon('pr')} #${p.number} ${esc(p.title)}</span>`).join('')}</div>`);
-  }
   // 作業途中の表示
   let banner = '';
   if (repo) {
@@ -499,7 +492,26 @@ function renderBoard() {
     }
     if (repo.stash.length) banner += `${banner ? '　' : ''}${icon('archive')} 退避 ${repo.stash.length}`;
   }
-  $('#opbanner').innerHTML = banner ? `<div class="op">${banner}</div>` : '';
+  // 開いている PR (GitHub 上の申請) も上に出す
+  const prRemote = remoteUrl && w.remotes[remoteUrl];
+  const prs = prRemote ? prRemote.prs.filter((p) => p.state === 'open') : [];
+  $('#opbanner').innerHTML = (banner ? `<div class="op">${banner}</div>` : '')
+    + prs.map((p) => `<div class="op pr-op">${icon('pr')} PR #${p.number} ${esc(p.head)} → ${esc(p.base)} <small>マージ待ち</small></div>`).join('');
+  // ゴールの小窓は上の帯 (依頼・作業途中・PR) のすぐ下に置く
+  const ft = $('.float-top');
+  $('#goal-box').style.top = `${ft.offsetTop + ft.offsetHeight + 6}px`;
+  fitTop(el); // 上の帯 (依頼・ゴール・作業途中) の高さが決まってから
+  if (game.graphTab === 'local') {
+    if (!repo) {
+      el.innerHTML = `<div class="graph-empty">${icon('folder', 'big')}<br>まだ Git の管理外です<br><small>clone か init から</small></div>`;
+    } else {
+      renderGraph(el, w, localRefs(repo), { key: 'local:' + w.cwd, headId: headId(repo), onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: 'まだコミットがありません<br><small>add → commit で記録しよう</small>' });
+    }
+  } else {
+    const remote = w.remotes[remoteUrl];
+    renderGraph(el, w, remoteRefsOf(remote), { key: 'remote:' + remoteUrl, onPick, fit: graphFit(el), zoom: game.zoom, noAnim: zooming, empty: '空のリポジトリです' });
+  }
+
 }
 // ---------- ブランチ図の拡大縮小 (2本指 / Ctrl+ホイール) ----------
 let zooming = false;
@@ -718,7 +730,7 @@ function finishStage() {
       <p class="muted">${g.used} 手 (目標 ${g.def.par} 手)</p>
       <div class="lesson-box"><b>${icon('info')} ポイント</b><p>${esc(g.def.learn)}</p></div>
       <div class="answer-box"><b>模範解答</b><code>${esc(g.def.solution.filter((c) => !c.startsWith('__')).join(' → '))}</code></div>`,
-    actions: [[`${icon('restart')} もう一度`, () => startStage(g.idx)], next ? [`次へ ${icon('play')}`, () => go(`#/stage/${g.idx + 2}`), 'primary'] : [`${icon('gamepad')} チャレンジへ`, () => go('#/challenge'), 'primary']],
+    actions: [[`${icon('restart')} もう一度`, () => startStage(g.idx)], next ? [`次へ ${icon('play')}`, () => go(`#/stage/${g.idx + 2}`), 'primary'] : [`${icon('gamepad')} チーム開発へ`, () => go('#/challenge'), 'primary']],
   }), 500);
 }
 function starHtml(n) {
@@ -735,6 +747,7 @@ function renderStageCard() {
       <span class="moves" title="手数">${g.used}<small>/${d.par}手</small></span>
     </div>
     <p class="req-text">${esc(d.goal)}</p>
+    ${d.intro ? `<p class="req-intro">${icon('info')}<span>${esc(d.intro)}</span></p>` : ''}
     ${g.hint ? `<p class="req-hint">${icon('bulb')}<code>${esc(d.hint)}</code></p>` : ''}
     <div class="req-actions">
       ${g.done ? `<button class="btn primary" id="btn-next">次へ ${icon('play')}</button>` : `<button class="btn" id="btn-hint">${icon('bulb')}ヒント</button>`}
@@ -1327,7 +1340,7 @@ function renderHome() {
 function renderStageSelect() {
   setScreen('lessons', 'コマンドを覚える');
   const next = nextStageIdx();
-  const chNames = { 1: '記録とブランチ', 2: '合流', 3: '移動と取り消し', 4: 'チーム' };
+  const chNames = { 1: '記録とブランチ', 2: '合流', 3: '移動と取り消し', 4: 'チーム', 5: 'プルリクエスト' };
   let html = '';
   let ch = 0;
   STAGES.forEach((s, i) => {

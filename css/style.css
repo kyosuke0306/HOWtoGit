@@ -728,3 +728,12 @@ body[data-screen="home"] .brand { visibility: hidden; }
 @keyframes glow { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 100% { box-shadow: 0 0 0 22px transparent; } }
 .modal.game .modal-body { overflow: visible; }
 .lesson-box p b { color: var(--accent-2); }
+#opbanner { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+#opbanner .pr-op { background: color-mix(in srgb, var(--purple) 20%, var(--bg-panel)); color: var(--text); }
+#opbanner .pr-op .i { color: var(--purple); }
+#opbanner .pr-op small { color: var(--muted); margin-left: 4px; }
+.req-intro { display: flex; gap: 6px; margin: 6px 0 0; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--purple) 12%, var(--bg-raised)); font-size: 13px; line-height: 1.6; }
+.req-intro .i { flex: none; width: 16px; height: 16px; margin-top: 3px; color: var(--purple); }
+.goal-pr { position: relative; display: flex; align-items: center; gap: 4px; margin: 2px 8px 6px; font-size: 11px; color: var(--purple); }
+.goal-pr .i { width: 13px; height: 13px; }
+.goal-pr small { color: var(--muted); }
