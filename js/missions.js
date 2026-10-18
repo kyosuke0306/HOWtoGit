@@ -430,7 +430,7 @@ export const MISSIONS = [
       api.w.cwd = tPath(api);
       m.file = api.pick(Object.keys(api.w.tree(headId(d.repo))).filter((f) => /\.(js|html|css|txt)$/.test(f)));
       d.files[m.file] = 'ああああああああ (猫がキーボードの上を歩いた)\n';
-      m.story = `<b>${m.file}</b> がぐちゃぐちゃに…！最後に記録した状態に戻せばいいよ。`;
+      m.story = `あなたのパソコンの <b>${m.file}</b> に猫が乗って、中身がぐちゃぐちゃに！まだコミットしていない変更だから、最後に記録した状態に戻せるはずだよ。`;
     },
     hints: (m) => ['git status / git diff で状態を確認', `git restore ${m.file} で最後のコミットの状態に戻せます`],
     check(api, evs, m) {
