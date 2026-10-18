@@ -766,7 +766,7 @@ function startChallenge() {
   const w = new World();
   setWorld(w);
   buildTeamRemote(w);
-  game.ch = { n: 0, score: 0, hearts: 3, streak: 0, used: new Set(), mission: null, mem: {}, hints: 0, state: 'playing', history: [], result: null };
+  game.ch = { n: 0, score: 0, cleared: 0, gained: 0, rankUp: null, hearts: 3, streak: 0, used: new Set(), mission: null, mem: {}, hints: 0, state: 'playing', history: [], result: null };
   setScreen('play', 'チャレンジ');
   beginMission(FIRST_MISSION);
 }
@@ -831,13 +831,25 @@ function checkChallenge(events) {
   else if (res && res.fail) missionFail(res.fail);
 }
 
+// ---------- 点数と称号 (チーム開発の1回ごと。最初からやり直すと 0 から) ----------
+const RANKS = [[0, 'Git見習い'], [300, 'コミッター'], [700, 'ブランチ使い'], [1200, 'マージ職人'], [1800, '競合ハンター'], [2600, 'リベース名人'], [3600, 'チームの要'], [5000, 'Git仙人']];
+function rankOf(score) { return RANKS.filter(([min]) => score >= min).pop()[1]; }
+// 依頼の難易度 (1〜3) と点数
+function levelOf(m) { return m.points <= 100 ? 1 : m.points <= 160 ? 2 : 3; }
+function pointsOf(m) { return levelOf(m) * 100; }
+const levelStars = (lv) => `<span class="lv-stars">${[1, 2, 3].map((i) => `<span class="star${i <= lv ? ' on' : ''}">${icon('star')}</span>`).join('')}</span>`;
+
 function missionSuccess() {
   const c = game.ch;
   c.result = 'success';
   c.streak++;
-  c.score++; // 成功した依頼の数
-  if (c.score > (save.bestClear || 0)) { save.bestClear = c.score; persist(); }
-  termHtml(`<div class="banner success">${icon('check-circle')} 成功！</div>`);
+  c.cleared++;
+  const before = rankOf(c.score);
+  c.gained = pointsOf(c.mission);
+  c.score += c.gained;
+  c.rankUp = rankOf(c.score) !== before ? rankOf(c.score) : null;
+  if (c.score > (save.bestScore || 0)) { save.bestScore = c.score; persist(); }
+  termHtml(`<div class="banner success">${icon('check-circle')} 成功！ +${c.gained}点</div>`);
   confetti();
   renderAll();
   setTimeout(() => resultSheet(true), 700);
@@ -864,10 +876,10 @@ function resultSheet(ok) {
   showResult({
     kind: ok ? 'success' : over ? 'over' : 'fail',
     title: ok ? '成功！' : over ? 'ゲームオーバー' : '失敗…',
-    body: `${ok ? '' : `<p class="fail-reason">${esc(c.failReason)}</p>`}
+    body: `${ok ? `<div class="gain"><span class="plus">+${c.gained}</span><span class="total">合計 ${c.score}点</span></div>${c.rankUp ? `<div class="rank-up">${icon('arrow-up')} 称号アップ！<b>${esc(c.rankUp)}</b></div>` : ''}` : `<p class="fail-reason">${esc(c.failReason)}</p>`}
       <div class="lesson-box"><b>${icon('info')} 判断のポイント</b><p>${m.lesson || ''}</p></div>
       ${m.answer ? `<div class="answer-box"><b>模範解答</b><code>${esc(m.answer)}</code></div>` : ''}
-      ${over ? `<p class="big-score">${c.score}件 クリア</p><p>${c.score && c.score >= save.bestClear ? `${icon('trophy')} 自己ベスト！` : `ベスト ${save.bestClear || 0}件`}</p>` : ''}`,
+      ${over ? `<div class="final"><p class="big-score">${c.score}<small>点</small></p><p class="rank">${icon('trophy')} ${esc(rankOf(c.score))}</p><p class="muted">${c.cleared}件 クリア ・ ${c.score && c.score >= save.bestScore ? '自己ベスト！' : `ベスト ${save.bestScore || 0}点`}</p></div>` : ''}`,
     actions: over
       ? [[`${icon('home')} トップ`, () => go('#/')], [`${icon('restart')} もう一度`, () => startChallenge(), 'primary']]
       : [[`次の依頼 ${icon('play')}`, () => nextMission(), 'primary']],
@@ -921,7 +933,7 @@ function renderChallengeCard() {
   const hints = (typeof m.hints === 'function' ? m.hints(c.mem) : m.hints) || [];
   const shown = hints.slice(0, c.hints).map((h) => `<li>${esc(h)}</li>`).join('');
   const hp = Math.max(0, c.hearts);
-  setChip(`<span class="badge challenge">${c.n}</span><span class="chip-text">${esc(m.title)}</span><span class="stats-inline"><span class="hearts">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span></span>`);
+  setChip(`<span class="badge challenge">${c.n}</span><span class="chip-text">${esc(m.title)}</span><span class="stats-inline"><span class="hearts">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span><span class="score">${c.score}</span></span>`);
   $('#req').innerHTML = `
     <div class="req-head">
       <span class="badge challenge">依頼 ${c.n}</span>
@@ -929,6 +941,7 @@ function renderChallengeCard() {
       <span class="stats-inline"><span class="hearts" title="ライフ">${icon('heart').repeat(hp)}<span class="lost">${icon('heart').repeat(3 - hp)}</span></span></span>
       <button class="btn icon" id="btn-restart" title="最初から" aria-label="最初から">${icon('restart')}</button>
     </div>
+    <div class="req-meta">${levelStars(levelOf(m))}<span>+${pointsOf(m)}点</span><span class="sep"></span><span>${c.score}点</span><span class="rank-name">${esc(rankOf(c.score))}</span></div>
     <div class="story"><div class="avatar">${avatar(m.who, 34)}</div><div><p>${story}</p>${m.detail ? `<p class="detail muted">${m.detail}</p>` : ''}</div></div>
     ${shown ? `<ul class="hints">${shown}</ul>` : ''}
     <div class="req-actions">
@@ -1335,7 +1348,7 @@ function renderHome() {
       <a class="mode-card challenge" href="#/challenge">
         <span class="mode-icon">${icon('gamepad')}</span>
         <span class="mode-body"><b>チーム開発</b>${playing ? '<small>続きから</small>' : ''}</span>
-        <span class="mode-meta">${save.bestClear ? `${icon('trophy')}${save.bestClear}件` : ''}</span>
+        <span class="mode-meta">${save.bestScore ? `${icon('trophy')}${save.bestScore}点` : ''}</span>
       </a>
       <a class="mode-card free" href="#/free">
         <span class="mode-icon">${icon('flask')}</span>
