@@ -355,8 +355,11 @@ function renderBuilder() {
     ? `<div class="chips urgent">${quick.map((c, i) => `<button type="button" class="chip-btn" data-q="${i}">${esc(c.label)}</button>`).join('')}</div>`
     : chips.length ? `<div class="chips">${chips.map((c, i) => `<button type="button" class="chip-btn ${c.kind || ''}" data-c="${i}">${esc(c.label)}</button>`).join('')}</div>` : `<div class="chips empty">${cur ? 'そのまま実行できます' : 'コマンドを選ぼう (グラフもタップできる)'}</div>`;
   const usable = new Set(game.mode === 'stage' ? ['status', 'commit', 'log', 'branch', 'switch', 'merge', 'rebase', 'reset', 'revert', 'cherry-pick', 'tag', 'fetch', 'pull', 'push', 'add', 'edit', 'diff', 'stash', 'restore'] : null);
-  const btns = GROUPS.flatMap(([, cmds], gi) => cmds.filter((c) => !usable.size || usable.has(c)).map((c) => `<button type="button" class="cmd-btn g${gi}${cur === c ? ' on' : ''}" data-cmd="${c}" title="${esc(DESC[c] || '')}">${esc(c)}</button>`)).join('');
-  el.innerHTML = chipRow + `<div class="cmd-grid">${btns}</div>`;
+  const rows = GROUPS.map(([name, cmds], gi) => {
+    const btns = cmds.filter((c) => !usable.size || usable.has(c)).map((c) => `<button type="button" class="cmd-btn${cur === c ? ' on' : ''}" data-cmd="${c}" title="${esc(DESC[c] || '')}">${esc(c)}</button>`).join('');
+    return btns ? `<div class="cmd-row g${gi}"><span class="cmd-group">${name}</span>${btns}</div>` : '';
+  }).join('');
+  el.innerHTML = chipRow + `<div class="cmd-grid">${rows}</div>`;
   el.querySelectorAll('[data-cmd]').forEach((b) => (b.onclick = () => {
     selCmd = b.dataset.cmd;
     const base = baseFor(selCmd, game.world);
