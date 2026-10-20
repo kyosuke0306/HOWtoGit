@@ -627,6 +627,8 @@ body[data-screen="play"] .topbar { display: none; }
 .code-fab { color: var(--warn); font-size: 13px; font-weight: 700; }
 .code-files { display: flex; flex-wrap: wrap; gap: 8px; }
 .code-files .chip { font-size: 15px; padding: 8px 14px; }
+.code-note { margin: 0 0 12px; font-size: 13px; line-height: 1.6; }
+.code-note code { font-family: var(--mono); color: var(--text); }
 /* 質問 (Gemini) */
 .ask-btn { color: #79c0ff; }
 .ask-sheet { height: 72%; }
