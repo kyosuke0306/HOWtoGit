@@ -1,12 +1,13 @@
 // コマンドをボタンで組み立てる
 import { computeStatus, headId, currentBranch } from './git.js';
 
+// 1 行 = 1 グループ。作業の流れの順 (見る → 書いて記録 → ブランチ → 共有 → 戻す)
 export const GROUPS = [
-  ['記録', ['status', 'add', 'commit', 'log']],
-  ['ブランチ', ['branch', 'switch', 'merge', 'rebase']],
-  ['共有', ['fetch', 'pull', 'push', 'gh']],
-  ['戻す', ['reset', 'revert', 'restore', 'stash']],
-  ['その他', ['cherry-pick', 'tag', 'diff', 'edit', 'clone', 'cd']],
+  ['見る', ['status', 'diff', 'log', 'cd']],
+  ['記録', ['edit', 'add', 'commit', 'tag']],
+  ['ブランチ', ['branch', 'switch', 'merge', 'rebase', 'cherry-pick']],
+  ['共有', ['clone', 'fetch', 'pull', 'push', 'gh']],
+  ['戻す', ['restore', 'stash', 'reset', 'revert']],
 ];
 
 // 各コマンドの説明 (短く)

@@ -522,14 +522,17 @@ body.cmd-open .fab-bar { bottom: 8px; }
 .cmd-desc { min-height: 0; padding: 0 12px 2px; }
 .chips { min-height: 34px; padding-bottom: 6px; }
 .chip-btn { padding: 4px 11px; }
-.cmd-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
-.cmd-btn { height: 34px; font-size: 12px; }
-.cmd-btn.g0 { background: #253043; }
-.cmd-btn.g1 { background: #1f3a2b; }
-.cmd-btn.g2 { background: #3a2a3f; }
-.cmd-btn.g3 { background: #40302a; }
-.cmd-btn.g4 { background: #2b3139; }
-.cmd-btn.on { background: #1f6feb; }
+.cmd-grid { display: flex; flex-direction: column; gap: 4px; }
+.cmd-row { display: grid; grid-template-columns: 42px repeat(5, 1fr); gap: 4px; align-items: center; }
+.cmd-group { font-size: 10px; font-weight: 700; color: var(--g); text-align: center; white-space: nowrap; }
+.cmd-btn { height: 32px; font-size: 12px; }
+.cmd-row .cmd-btn { background: color-mix(in srgb, var(--g) 22%, #161b22); }
+.cmd-row.g0 { --g: #8b949e; }
+.cmd-row.g1 { --g: #79c0ff; }
+.cmd-row.g2 { --g: #7ee787; }
+.cmd-row.g3 { --g: #d2a8ff; }
+.cmd-row.g4 { --g: #ffa657; }
+.cmd-row .cmd-btn.on { background: #1f6feb; }
 .req-actions .btn { padding: 4px 10px; min-height: 36px; }
 .moves { font-size: 15px; }
 
