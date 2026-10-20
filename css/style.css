@@ -139,7 +139,8 @@ button { font: inherit; color: inherit; }
 .graph-svg .head-ring { fill: none; stroke: var(--text); stroke-width: 2; opacity: .8; animation: ring 2s infinite; transform-box: fill-box; transform-origin: center; }
 .graph-svg .node-hit { cursor: pointer; }
 .graph-svg .node-hit .hit { fill: transparent; }
-.graph-svg .node-hit:active .node { opacity: .6; }
+.graph-svg .node.tap { animation: tap .5s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes tap { 0% { transform: scale(1); } 35% { transform: scale(1.7); } 100% { transform: scale(1); } }
 .graph-inner.compact .node-hit { pointer-events: none; }
 .graph-rows { position: absolute; top: 0; right: 0; }
 .graph-row { position: absolute; left: 0; right: 0; height: 34px; display: flex; align-items: center; gap: 6px; padding: 0 10px 0 4px; white-space: nowrap; font-size: 13px; }

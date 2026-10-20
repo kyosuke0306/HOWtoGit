@@ -162,7 +162,14 @@ export function renderGraph(container, world, refs, opts = {}) {
     const label = c.message.split('\n')[0];
     return easy && /^C\d+'*$/.test(label) ? label : c.id.slice(0, 7);
   };
-  let svg = `<svg class="graph-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
+  // ネオン風の光: 線と点をぼかした光を下に重ねる (id は図ごとに別にする)
+  const glowId = 'glow-' + key.replace(/[^\w-]/g, '_');
+  const blur = (opts.compact ? 1.5 : 2.5) * Math.min(D.k || 1, 2);
+  let svg = `<svg class="graph-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`
+    + `<defs><filter id="${glowId}" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="${blur}" result="b"/>`
+    + `<feComponentTransfer in="b" result="g"><feFuncA type="linear" slope="1.6"/></feComponentTransfer>`
+    + `<feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`
+    + `<g class="neon" filter="url(#${glowId})">`;
   for (const e of L.edges) {
     const color = e.merge ? e.to.color : e.from.col >= e.to.col ? e.from.color : e.to.color;
     svg += `<path d="${edgePath(e, D)}" stroke="${color}" class="edge${e.merge ? ' merge' : ''}"/>`;
@@ -172,14 +179,14 @@ export function renderGraph(container, world, refs, opts = {}) {
     const x = D.pad + n.col * D.col, y = D.pad + n.row * D.row;
     const isNew = old.size && !old.has(n.id);
     const cls = ['node', isNew ? 'pop' : ''].join(' ');
-    svg += `<g class="node-hit" data-pick="commit" data-val="${esc(pickOf(c))}">`;
+    svg += `<g class="node-hit">`;
     if (n.id === headId) svg += `<circle cx="${x}" cy="${y}" r="${D.r + 5}" class="head-ring"/>`;
     if (c.parents.length > 1) svg += `<circle cx="${x}" cy="${y}" r="${D.r}" fill="var(--bg-raised)" stroke="${n.color}" stroke-width="3" class="${cls}"/>`;
     else svg += `<circle cx="${x}" cy="${y}" r="${D.r}" fill="${n.color}" class="${cls}"/>`;
     // 指で押しやすいように、見えない大きめの当たり判定
     svg += `<circle cx="${x}" cy="${y}" r="${Math.max(D.r + 4, Math.min(D.row, D.col) / 2)}" class="hit"/></g>`;
   }
-  svg += '</svg>';
+  svg += '</g></svg>';
 
   const refsAt = {};
   refs.forEach((r) => { if (r.id) (refsAt[r.id] = refsAt[r.id] || []).push(r); });
@@ -204,6 +211,15 @@ export function renderGraph(container, world, refs, opts = {}) {
   }
   container.innerHTML = `<div class="graph-inner${opts.compact ? ' compact' : ''}" style="height:${height}px;--gk:${(D.k || 1).toFixed(3)}"><div class="graph-lines" style="width:${width}px">${svg}</div><div class="graph-rows" style="left:${width + 2}px">${rows}</div></div>`;
   container.onclick = (e) => {
+    // 点はタップすると弾むだけ (入力はしない)
+    const hit = e.target.closest('.node-hit');
+    if (hit) {
+      const dot = hit.querySelector('.node');
+      dot.classList.remove('pop', 'tap');
+      void dot.getBoundingClientRect();
+      dot.classList.add('tap');
+      return;
+    }
     const b = e.target.closest('[data-pick]');
     if (b && opts.onPick) opts.onPick(b.dataset.pick, b.dataset.val);
   };
