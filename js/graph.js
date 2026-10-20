@@ -156,6 +156,12 @@ export function renderGraph(container, world, refs, opts = {}) {
   const width = D.pad * 2 + (L.cols - 1) * D.col;
   const height = D.pad * 2 + (L.nodes.length - 1) * D.row;
   const headId = opts.headId;
+  const easy = world.easy;
+  // タップしたときにコマンドへ入れる値 (かんたんモードは C1 などの名前)
+  const pickOf = (c) => {
+    const label = c.message.split('\n')[0];
+    return easy && /^C\d+'*$/.test(label) ? label : c.id.slice(0, 7);
+  };
   let svg = `<svg class="graph-svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`;
   for (const e of L.edges) {
     const color = e.merge ? e.to.color : e.from.col >= e.to.col ? e.from.color : e.to.color;
@@ -166,15 +172,17 @@ export function renderGraph(container, world, refs, opts = {}) {
     const x = D.pad + n.col * D.col, y = D.pad + n.row * D.row;
     const isNew = old.size && !old.has(n.id);
     const cls = ['node', isNew ? 'pop' : ''].join(' ');
+    svg += `<g class="node-hit" data-pick="commit" data-val="${esc(pickOf(c))}">`;
     if (n.id === headId) svg += `<circle cx="${x}" cy="${y}" r="${D.r + 5}" class="head-ring"/>`;
     if (c.parents.length > 1) svg += `<circle cx="${x}" cy="${y}" r="${D.r}" fill="var(--bg-raised)" stroke="${n.color}" stroke-width="3" class="${cls}"/>`;
     else svg += `<circle cx="${x}" cy="${y}" r="${D.r}" fill="${n.color}" class="${cls}"/>`;
+    // 指で押しやすいように、見えない大きめの当たり判定
+    svg += `<circle cx="${x}" cy="${y}" r="${Math.max(D.r + 4, Math.min(D.row, D.col) / 2)}" class="hit"/></g>`;
   }
   svg += '</svg>';
 
   const refsAt = {};
   refs.forEach((r) => { if (r.id) (refsAt[r.id] = refsAt[r.id] || []).push(r); });
-  const easy = world.easy;
   let rows = '';
   for (const n of L.nodes) {
     const c = world.objects[n.id];
@@ -188,7 +196,7 @@ export function renderGraph(container, world, refs, opts = {}) {
     }).join('');
     const label = c.message.split('\n')[0];
     const isNew = old.size && !old.has(n.id);
-    const pickVal = easy && /^C\d+'*$/.test(label) ? label : c.id.slice(0, 7);
+    const pickVal = pickOf(c);
     rows += `<div class="graph-row${isNew ? ' row-new' : ''}${n.id === headId ? ' row-head' : ''}" style="top:${D.pad + n.row * D.row - D.row / 2}px;height:${D.row}px" data-flip="row:${key}:${n.id}">`
       + `<button type="button" class="commit-btn" data-pick="commit" data-val="${esc(pickVal)}">`
       + (easy ? `<span class="cname">${esc(label)}</span>` : `<span class="hash">${c.id.slice(0, 7)}</span><span class="msg">${esc(label)}</span>`)
