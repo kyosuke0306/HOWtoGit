@@ -1154,7 +1154,8 @@ function openCode() {
   const sug = game.mode === 'challenge' && game.ch && game.ch.mem.newFile;
   const fresh = sug && dir.files[sug] === undefined ? sug : `feature${codeN + 1}.js`;
   const chip = (f, cls, mark) => `<button type="button" class="chip ${cls}" data-file="${esc(f)}">${mark}${esc(f)}</button>`;
-  const html = `<div class="files code-files">${chip(fresh, 'untracked', `<i>${icon('pencil')}</i>`).replace('</button>', ' <small>新規</small></button>')}${files.map((f) => chip(f, '', '')).join('')}</div>`;
+  const note = `<p class="code-note muted">タップすると<b>自動で</b>コードを書き足します。<br>自分で書くなら <code>edit ファイル名</code></p>`;
+  const html = `${note}<div class="files code-files">${chip(fresh, 'untracked', `<i>${icon('pencil')}</i>`).replace('</button>', ' <small>新規</small></button>')}${files.map((f) => chip(f, '', '')).join('')}</div>`;
   openModal(`${icon('pencil')} どこを書く？`, html, (box) => {
     box.querySelectorAll('.chip').forEach((b) => (b.onclick = () => { closeModal(); writeCode(b.dataset.file); }));
   });
