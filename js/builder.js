@@ -1,14 +1,16 @@
 // コマンドをボタンで組み立てる
 import { computeStatus, headId, currentBranch } from './git.js';
 
-// 1 行 = 1 グループ。作業の流れの順 (見る → 書いて記録 → ブランチ → 共有 → 戻す)
+// 1 行 = 1 グループ。git は作業の流れの順 (見る → 書いて記録 → ブランチ → 共有 → 戻す)
 export const GROUPS = [
-  ['見る', ['status', 'diff', 'log', 'cd']],
-  ['記録', ['edit', 'add', 'commit', 'tag']],
+  ['見る', ['status', 'diff', 'log']],
+  ['記録', ['add', 'commit', 'tag']],
   ['ブランチ', ['branch', 'switch', 'merge', 'rebase', 'cherry-pick']],
-  ['共有', ['clone', 'fetch', 'pull', 'push', 'gh']],
+  ['共有', ['clone', 'fetch', 'pull', 'push']],
   ['戻す', ['restore', 'stash', 'reset', 'revert']],
 ];
+// git 以外 (ターミナルのコマンドと GitHub の gh) は別の段に分ける
+export const TERM_CMDS = ['ls', 'cat', 'cd', 'edit', 'gh'];
 
 // 各コマンドの説明 (短く)
 export const DESC = {
@@ -38,6 +40,8 @@ export const DESC = {
   init: 'Git の管理を始める',
   remote: 'GitHub の登録',
   edit: 'ファイルを編集する',
+  ls: 'ファイルの一覧を見る',
+  cat: 'ファイルの中身を見る',
   cd: 'フォルダを移動する',
 };
 
@@ -46,7 +50,7 @@ const BASE = {
   branch: 'git branch ', switch: 'git switch ', merge: 'git merge ', rebase: 'git rebase ',
   reset: 'git reset ', revert: 'git revert ', restore: 'git restore ', stash: 'git stash',
   fetch: 'git fetch', pull: 'git pull', push: 'git push', gh: 'gh pr ',
-  'cherry-pick': 'git cherry-pick ', tag: 'git tag ', diff: 'git diff', edit: 'edit ', clone: 'git clone ', cd: 'cd ',
+  'cherry-pick': 'git cherry-pick ', tag: 'git tag ', diff: 'git diff', edit: 'edit ', ls: 'ls', cat: 'cat ', clone: 'git clone ', cd: 'cd ',
 };
 
 export function baseFor(cmd, world) {
@@ -84,7 +88,7 @@ export function chipsFor(cmd, world, line, extra = {}) {
     if (world.cwd !== '~') add('..');
     return chips;
   }
-  if (cmd === 'edit') { Object.keys(dir.files).sort().forEach((f) => add(f, f, 'file')); return chips; }
+  if (cmd === 'edit' || cmd === 'cat') { Object.keys(dir.files).sort().forEach((f) => add(f, f, 'file')); return chips; }
   if (!repo) return chips;
   const cur = currentBranch(repo);
   const branches = Object.keys(repo.branches);

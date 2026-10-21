@@ -534,6 +534,11 @@ body.cmd-open .fab-bar { bottom: 8px; }
 .cmd-row.g3 { --g: #d2a8ff; }
 .cmd-row.g4 { --g: #ffa657; }
 .cmd-row .cmd-btn.on { background: #1f6feb; }
+.cmd-head { font-family: var(--mono); font-size: 11px; font-weight: 700; color: #f0883e; margin: 0 0 -1px 2px; }
+.cmd-head.term { color: #8b949e; margin-top: 4px; padding-top: 6px; border-top: 1px dashed #30363d; }
+.cmd-row.term { grid-template-columns: repeat(5, 1fr); }
+.cmd-row.term .cmd-btn { background: #21262d; border: 1px solid #30363d; }
+.cmd-row.term .cmd-btn.on { background: #1f6feb; border-color: #1f6feb; }
 .req-actions .btn { padding: 4px 10px; min-height: 36px; }
 .moves { font-size: 15px; }
 

@@ -11,7 +11,7 @@ import { icon, avatar, injectSprite } from './icons.js';
 import { createKeyboard } from './keyboard.js';
 import { ask, loadSettings, saveSettings, formatAnswer, DEFAULT_MODEL } from './ask.js';
 import { diagnose, LOOK, LAST_RESORT } from './help.js';
-import { GROUPS, DESC, baseFor, cmdOf, chipsFor, opChips } from './builder.js';
+import { GROUPS, TERM_CMDS, DESC, baseFor, cmdOf, chipsFor, opChips } from './builder.js';
 
 injectSprite();
 
@@ -355,11 +355,14 @@ function renderBuilder() {
     ? `<div class="chips urgent">${quick.map((c, i) => `<button type="button" class="chip-btn" data-q="${i}">${esc(c.label)}</button>`).join('')}</div>`
     : chips.length ? `<div class="chips">${chips.map((c, i) => `<button type="button" class="chip-btn ${c.kind || ''}" data-c="${i}">${esc(c.label)}</button>`).join('')}</div>` : `<div class="chips empty">${cur ? 'そのまま実行できます' : 'コマンドを選ぼう (グラフもタップできる)'}</div>`;
   const usable = new Set(game.mode === 'stage' ? ['status', 'commit', 'log', 'branch', 'switch', 'merge', 'rebase', 'reset', 'revert', 'cherry-pick', 'tag', 'fetch', 'pull', 'push', 'add', 'edit', 'diff', 'stash', 'restore'] : null);
+  const btnsOf = (cmds) => cmds.filter((c) => !usable.size || usable.has(c)).map((c) => `<button type="button" class="cmd-btn${cur === c ? ' on' : ''}" data-cmd="${c}" title="${esc(DESC[c] || '')}">${esc(c)}</button>`).join('');
   const rows = GROUPS.map(([name, cmds], gi) => {
-    const btns = cmds.filter((c) => !usable.size || usable.has(c)).map((c) => `<button type="button" class="cmd-btn${cur === c ? ' on' : ''}" data-cmd="${c}" title="${esc(DESC[c] || '')}">${esc(c)}</button>`).join('');
+    const btns = btnsOf(cmds);
     return btns ? `<div class="cmd-row g${gi}"><span class="cmd-group">${name}</span>${btns}</div>` : '';
   }).join('');
-  el.innerHTML = chipRow + `<div class="cmd-grid">${rows}</div>`;
+  const term = btnsOf(TERM_CMDS);
+  el.innerHTML = chipRow + `<div class="cmd-grid"><div class="cmd-head">git</div>${rows}`
+    + (term ? `<div class="cmd-head term">ターミナル</div><div class="cmd-row term">${term}</div>` : '') + '</div>';
   el.querySelectorAll('[data-cmd]').forEach((b) => (b.onclick = () => {
     selCmd = b.dataset.cmd;
     const base = baseFor(selCmd, game.world);
