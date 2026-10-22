@@ -686,12 +686,13 @@ body[data-screen="home"] .brand { visibility: hidden; }
 /* HELP */
 .help-lead { margin: 0 0 10px; color: var(--muted); font-size: 13px; }
 .help-item { padding: 10px 12px; border-radius: 12px; background: var(--bg-raised); margin-bottom: 10px; }
+.help-note { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; font-size: 12px; color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
 .help-item > b { font-size: 14px; }
 .help-item p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .help-item ol { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .help-item li span { display: block; margin-bottom: 3px; }
 .help-cmd { display: inline-block; max-width: 100%; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-term); color: #e6edf3; cursor: pointer; text-align: left; }
-.help-cmd code { font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+.help-cmd code { background: none; padding: 0; color: #7ee787; font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-all; }
 .help-item.ok { border-left: 3px solid var(--accent); }
 .help-item.last { border: 1px dashed var(--border); background: transparent; }
 .help-mini { width: auto; padding: 0 12px; font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--warn); }
