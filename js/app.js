@@ -621,7 +621,7 @@ function renderChat() {
   const box = $('#ask-msgs');
   box.innerHTML = chat.length
     ? chat.map((m) => `<div class="msg ${m.role}${m.err ? ' err' : ''}">${m.role === 'model' ? formatAnswer(m.text, esc) : esc(m.text)}</div>`).join('') + (asking ? '<div class="msg model typing"><i></i><i></i><i></i></div>' : '')
-    : `<div class="ask-empty">コマンドの意味や、いまの状況で次に何をすべきかを聞けます${game.mode === 'challenge' ? `<br><small>${icon('heart')} 質問 1回でライフ -1</small>` : ''}</div>`;
+    : `<div class="ask-empty">コマンドの意味や、いまの状況で次に何をすべきかを聞けます</div>`;
   box.scrollTop = box.scrollHeight;
 }
 function openAsk() {
@@ -665,15 +665,6 @@ $('#ask-form').onsubmit = async (e) => {
   const q = $('#ask-input').value.trim();
   if (!q || asking) return;
   if (!loadSettings().key) { openAsk(); return; }
-  // チーム開発では質問 1回でライフ -1 (答えが返らなかったら返す)
-  const c = game.mode === 'challenge' ? game.ch : null;
-  if (c) {
-    if (c.state !== 'playing') return;
-    if (c.hearts <= 1) { toast('ライフが残り1つなので質問できません'); return; }
-    if (!(await gameConfirm({ icon: 'chat', title: '質問する？', text: '答えをもらうとライフが減ります。', yes: '質問する', no: 'やめる', cost: 1, tone: 'warn' }))) return;
-    c.hearts--;
-    renderAll();
-  }
   $('#ask-input').value = '';
   chat.push({ role: 'user', text: q });
   asking = true;
@@ -683,7 +674,6 @@ $('#ask-form').onsubmit = async (e) => {
     chat.push({ role: 'model', text: await ask(history, askContext()) });
   } catch (err) {
     chat.push({ role: 'model', text: err.message || String(err), err: true });
-    if (c && c.state === 'playing') { c.hearts++; renderAll(); }
   }
   asking = false;
   renderChat();
