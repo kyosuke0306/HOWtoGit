@@ -10,7 +10,7 @@ import { COMMANDS, CONCEPTS, REF_SYNTAX, FIRST_TIME } from './docs.js';
 import { icon, avatar, injectSprite } from './icons.js';
 import { createKeyboard } from './keyboard.js';
 import { ask, loadSettings, saveSettings, formatAnswer, DEFAULT_MODEL } from './ask.js';
-import { diagnose, LOOK, LAST_RESORT } from './help.js';
+import { diagnose, snapshot, restorePlan, LOOK, LAST_RESORT } from './help.js';
 import { GROUPS, TERM_CMDS, DESC, baseFor, cmdOf, chipsFor, opChips } from './builder.js';
 
 injectSprite();
@@ -621,7 +621,7 @@ function renderChat() {
   const box = $('#ask-msgs');
   box.innerHTML = chat.length
     ? chat.map((m) => `<div class="msg ${m.role}${m.err ? ' err' : ''}">${m.role === 'model' ? formatAnswer(m.text, esc) : esc(m.text)}</div>`).join('') + (asking ? '<div class="msg model typing"><i></i><i></i><i></i></div>' : '')
-    : '<div class="ask-empty">コマンドの意味や、いまの状況で次に何をすべきかを聞けます</div>';
+    : `<div class="ask-empty">コマンドの意味や、いまの状況で次に何をすべきかを聞けます${game.mode === 'challenge' ? `<br><small>${icon('heart')} 質問 1回でライフ -1</small>` : ''}</div>`;
   box.scrollTop = box.scrollHeight;
 }
 function openAsk() {
@@ -665,6 +665,15 @@ $('#ask-form').onsubmit = async (e) => {
   const q = $('#ask-input').value.trim();
   if (!q || asking) return;
   if (!loadSettings().key) { openAsk(); return; }
+  // チーム開発では質問 1回でライフ -1 (答えが返らなかったら返す)
+  const c = game.mode === 'challenge' ? game.ch : null;
+  if (c) {
+    if (c.state !== 'playing') return;
+    if (c.hearts <= 1) { toast('ライフが残り1つなので質問できません'); return; }
+    if (!(await gameConfirm({ icon: 'chat', title: '質問する？', text: '答えをもらうとライフが減ります。', yes: '質問する', no: 'やめる', cost: 1, tone: 'warn' }))) return;
+    c.hearts--;
+    renderAll();
+  }
   $('#ask-input').value = '';
   chat.push({ role: 'user', text: q });
   asking = true;
@@ -674,6 +683,7 @@ $('#ask-form').onsubmit = async (e) => {
     chat.push({ role: 'model', text: await ask(history, askContext()) });
   } catch (err) {
     chat.push({ role: 'model', text: err.message || String(err), err: true });
+    if (c && c.state === 'playing') { c.hearts++; renderAll(); }
   }
   asking = false;
   renderChat();
@@ -802,6 +812,7 @@ function beginMission(def) {
     setTimeout(() => teamToast(who, 'ちょっと修正して push しました'), 1200);
   }
   try { if (def.setup) def.setup(api, c.mem); } catch (e) { console.error(e); }
+  c.start = snapshot(game.world, api.teamPath(), game.world.remotes[TEAM_URL]); // HELP で「依頼前」に戻すため
   termHtml(`<div class="banner mission-banner">${icon('mail')} 依頼 ${c.n}: ${esc(def.title)}</div>`);
   if (def !== FIRST_MISSION && navigator.vibrate) try { navigator.vibrate(60); } catch (e) { /* 無視 */ }
   renderAll();
@@ -975,20 +986,32 @@ async function useHelp() {
   if (game.mode === 'challenge') {
     if (!c || c.state !== 'playing') return;
     if (c.hearts <= 1) { toast('ライフが残り1つなので HELP は使えません'); return; }
-    if (!(await gameConfirm({ icon: 'alert', title: 'HELP を使う？', text: '元に戻す手順を教えます。', yes: '使う', no: 'やめる', cost: 1, tone: 'warn' }))) return;
+    if (!(await gameConfirm({ icon: 'alert', title: 'HELP を使う？', text: '依頼前の状態に戻す手順を教えます。', yes: '使う', no: 'やめる', cost: 1, tone: 'warn' }))) return;
     c.hearts--;
     renderAll();
   }
   openHelp();
 }
 function openHelp() {
-  const items = diagnose(game.world, { teamPath: game.mode === 'challenge' ? api.teamPath() : null });
   const step = ([label, cmd]) => `<li><span>${esc(label)}</span><button type="button" class="help-cmd" data-cmd="${esc(cmd)}"><code>${esc(cmd)}</code></button></li>`;
   const block = (title, why, steps, cls = '') => `<div class="help-item ${cls}"><b>${esc(title)}</b>${why ? `<p>${esc(why)}</p>` : ''}<ol>${steps.map(step).join('')}</ol></div>`;
-  const body = `<p class="help-lead">コマンドをタップすると入力欄に入ります。自分で実行して直そう。</p>
+  const lead = '<p class="help-lead">コマンドをタップすると入力欄に入ります。上から順に自分で実行しよう。</p>';
+  // チーム開発: 依頼が始まった時点に戻す
+  const plan = game.mode === 'challenge' && game.ch ? restorePlan(game.world, game.ch.start, game.world.remotes[TEAM_URL]) : null;
+  let body;
+  if (plan) {
+    const notes = plan.notes.map((n) => `<p class="help-note">${esc(n)}</p>`).join('');
+    body = lead + (plan.steps.length
+      ? block('依頼前の状態に戻す', '依頼が始まったときの形に戻します。そこからやり直そう。', plan.steps)
+      : plan.notes.length ? '' : '<div class="help-item ok"><b>依頼前のままです</b><p>まだ何も変わっていません。このまま依頼を始めよう。</p></div>') + notes
+      + block('確かめる', '', LOOK, 'look');
+  } else {
+    const items = diagnose(game.world, { teamPath: game.mode === 'challenge' ? api.teamPath() : null });
+    body = `${lead}
     ${block('1. まず状況を見る', '', LOOK, 'look')}
     ${items.length ? items.map((it, i) => block(`${i + 2}. ${it.title}`, it.why, it.steps)).join('') : '<div class="help-item ok"><b>2. 壊れているところは見つかりません</b><p>変更も作業途中もありません。ブランチの形が思ったものと違うなら、下の方法で前の状態に戻せます。</p></div>'}
     ${block('どうしても戻らないとき', 'reflog には HEAD が動いた記録がすべて残っています。壊れる前の行を探して、そこへ戻します。', LAST_RESORT, 'last')}`;
+  }
   openModal(`${icon('alert')} HELP: 元に戻すには`, body, (box) => {
     box.querySelectorAll('.help-cmd').forEach((b) => (b.onclick = () => {
       closeModal();

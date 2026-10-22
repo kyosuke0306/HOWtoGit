@@ -1,5 +1,88 @@
-// HELP: いまの状態から「元に戻す手順」を組み立てる (自動では直さない。実務の復旧手順を学ぶ)
+// HELP: 「元に戻す手順」を組み立てる (自動では直さない。実務の復旧手順を学ぶ)
 import { computeStatus } from './git.js';
+
+const short = (id) => id.slice(0, 7);
+const statusKey = (w, dir) => JSON.stringify(computeStatus(w, dir));
+
+// 依頼が始まった時点のリポジトリを覚えておく
+export function snapshot(w, path, remote) {
+  const dir = w.dirs[path];
+  const repo = dir && dir.repo;
+  if (!repo) return { path, repo: false };
+  return {
+    path,
+    repo: true,
+    head: { ...repo.head },
+    branches: { ...repo.branches },
+    tags: { ...repo.tags },
+    status: statusKey(w, dir),
+    clean: !Object.values(computeStatus(w, dir)).some((v) => Array.isArray(v) && v.length),
+    remote: remote ? JSON.stringify(remote.branches) : null,
+  };
+}
+
+// 依頼前の状態に戻す手順。戻り値: { steps: [[説明, コマンド]], notes: [文] }
+export function restorePlan(w, snap, remote) {
+  const steps = [];
+  const notes = [];
+  if (!snap || !snap.repo) return null;
+  const dir = w.dirs[snap.path];
+  const repo = dir && dir.repo;
+  if (!repo) return null;
+  if (w.cwd !== snap.path) steps.push(['リポジトリのフォルダに入る', `cd ${snap.path}`]);
+  if (repo.op) steps.push([`途中の ${repo.op.type} をやめる`, `git ${repo.op.type} --abort`]);
+
+  // 書きかけの変更
+  const s = computeStatus(w, dir);
+  const dirty = s.staged.length || s.unstaged.length || s.untracked.length || s.conflicts.length;
+  if (dirty && statusKey(w, dir) !== snap.status) {
+    if (snap.clean) {
+      steps.push(['書きかけの変更を捨てる', 'git reset --hard']);
+      if (s.untracked.length) steps.push(['新しく作ったファイルを消す', 'git clean -f']);
+    } else {
+      notes.push('この依頼は書きかけの変更がある状態から始まっています。変更は自分で元に戻してください (git status で確認)。');
+    }
+  }
+
+  // 依頼前にいたブランチへ
+  const sh = snap.head;
+  const cur = repo.head.type === 'branch' ? repo.head.name : null;
+  if (sh.type === 'branch') {
+    const b = sh.name, was = snap.branches[b];
+    if (cur !== b) {
+      if (repo.branches[b] !== undefined) steps.push([`${b} に戻る`, `git switch ${b}`]);
+      else if (was) steps.push([`消した ${b} を作り直して戻る`, `git switch -c ${b} ${short(was)}`]);
+    }
+    const now = repo.branches[b];
+    if (was && now !== undefined && now !== was) {
+      // 書きかけの変更から始まった依頼は、変更を残したまま (--soft) ブランチだけ戻す
+      steps.push(snap.clean ? [`${b} を依頼前のコミットに戻す`, `git reset --hard ${short(was)}`] : [`${b} を依頼前のコミットに戻す (変更は残す)`, `git reset --soft ${short(was)}`]);
+    }
+  } else if (repo.head.type !== 'detached' || repo.head.id !== sh.id) {
+    steps.push(['依頼前に見ていたコミットに戻る', `git switch --detach ${short(sh.id)}`]);
+  }
+
+  // ほかのブランチ
+  const startBranch = sh.type === 'branch' ? sh.name : null;
+  for (const [b, id] of Object.entries(snap.branches)) {
+    if (b === startBranch) continue;
+    if (repo.branches[b] === undefined) steps.push([`消した ${b} を作り直す`, `git branch ${b} ${short(id)}`]);
+    else if (repo.branches[b] !== id) steps.push([`${b} を依頼前の位置に戻す`, `git branch -f ${b} ${short(id)}`]);
+  }
+  for (const b of Object.keys(repo.branches)) {
+    if (snap.branches[b] === undefined && b !== startBranch) steps.push([`依頼中に作った ${b} を消す`, `git branch -D ${b}`]);
+  }
+  for (const t of Object.keys(repo.tags)) if (snap.tags[t] === undefined) steps.push([`依頼中に付けたタグ ${t} を消す`, `git tag -d ${t}`]);
+
+  // ブランチを移動せずに reset --hard <ID> するなら、先の「変更を捨てる」は要らない
+  const plain = steps.findIndex(([, c]) => c === 'git reset --hard');
+  if (plain >= 0 && !steps.some(([, c]) => c.startsWith('git switch')) && steps.some(([, c]) => c.startsWith('git reset --hard '))) steps.splice(plain, 1);
+
+  if (remote && snap.remote && JSON.stringify(remote.branches) !== snap.remote) {
+    notes.push('GitHub に送った (push した) ものは戻りません。仲間も使っているので、手元だけ戻しましょう。');
+  }
+  return { steps, notes };
+}
 
 // 戻り値: [{ title, why, steps: [[説明, コマンド]] }]
 export function diagnose(w, { teamPath } = {}) {
